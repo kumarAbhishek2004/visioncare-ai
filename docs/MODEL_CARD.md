@@ -70,25 +70,36 @@ $$L_{\text{Grad-CAM++}}^c = \text{ReLU}\left(\sum_k w_k^c A^k\right)$$
 
 ---
 
-## 5. Quantitative Validation Metrics (Baseline Model)
+## 5. Quantitative Validation Metrics & V1 vs V2 Progression
 
-| Pathology | Validation AUROC | Optimal Cutoff ($\tau^*$) | Temperature ($T$) |
-| :--- | :---: | :---: | :---: |
-| **Edema** | **0.8410** | 0.2454 | 0.6140 |
-| **Pneumothorax** | **0.8165** | 0.1780 | 0.6100 |
-| **Emphysema** | **0.8087** | 0.1000 | 0.5673 |
-| **Effusion** | **0.8045** | 0.4680 | 0.9939 |
-| **Atelectasis** | 0.7406 | 0.5615 | 1.1517 |
-| **Mass** | 0.7370 | 0.5641 | 1.2282 |
-| **Fibrosis** | 0.7365 | 0.4000 | 0.3401 |
-| **Cardiomegaly** | 0.7357 | 0.1370 | 0.5168 |
-| **Consolidation** | 0.6986 | 0.1462 | 0.6631 |
-| **Infiltration** | 0.6925 | 0.4430 | 0.6521 |
-| **Pleural Thickening** | 0.6905 | 0.2000 | 0.4320 |
-| **Pneumonia** | 0.6834 | 0.1000 | 0.3731 |
-| **Hernia** | 0.6671 | 0.1000 | 0.4050 |
-| **Nodule** | 0.6178 | 0.5580 | 1.3762 |
-| **OVERALL MEAN AUROC** | **0.7336** | — | — |
+### 5.1 Progression Overview
+- **V1 Baseline (224x224, BCE, 2-Stage Transfer Learning):**
+  - Final Loss: `0.4246`
+  - Mean Validation AUROC: `0.7336`
+- **V2 High-Performance (384x384, Asymmetric Loss / ASL, Deep Unfreezing, Test-Time Augmentation):**
+  - Final Training Loss: **`0.2674`** *(37% reduction in loss!)*
+  - Peak Checkpoint AUROC: **`0.7900`**
+  - Dual-View TTA Validation Mean AUROC: **`0.7951`** *(+6.15% overall AUROC gain!)*
+
+### 5.2 Per-Pathology Performance Comparison
+
+| Pathology | V1 Baseline AUROC | V2 High-Perf AUROC (TTA) | V2 Optimal Cutoff ($\tau^*$) | V2 Temperature ($T$) |
+| :--- | :---: | :---: | :---: | :---: |
+| **Hernia** | 0.6671 | **0.8830** *(+21.59%)* | 0.2577 | 0.9549 |
+| **Edema** | 0.8410 | **0.8714** *(+3.04%)* | 0.4016 | 0.9617 |
+| **Cardiomegaly** | 0.7357 | **0.8645** *(+12.88%)* | 0.3588 | 0.9637 |
+| **Effusion** | 0.8045 | **0.8600** *(+5.55%)* | 0.4913 | 0.9802 |
+| **Emphysema** | 0.8087 | **0.8527** *(+4.40%)* | 0.3525 | 0.9618 |
+| **Pneumothorax** | 0.8165 | **0.8413** *(+2.48%)* | 0.3947 | 0.9645 |
+| **Mass** | 0.7370 | **0.8160** *(+7.90%)* | 0.3936 | 0.9659 |
+| **Atelectasis** | 0.7406 | **0.7996** *(+5.90%)* | 0.4992 | 0.9875 |
+| **Pleural Thickening** | 0.6905 | **0.7677** *(+7.72%)* | 0.3903 | 0.9671 |
+| **Fibrosis** | 0.7365 | **0.7432** *(+0.67%)* | 0.3690 | 0.9617 |
+| **Consolidation** | 0.6986 | **0.7387** *(+4.01%)* | 0.3210 | 0.9619 |
+| **Pneumonia** | 0.6834 | **0.7353** *(+5.19%)* | 0.3156 | 0.9585 |
+| **Infiltration** | 0.6925 | **0.6950** *(+0.25%)* | 0.4843 | 0.9925 |
+| **Nodule** | 0.6178 | **0.6626** *(+4.48%)* | 0.3321 | 0.9644 |
+| **OVERALL MEAN AUROC** | **0.7336** | **0.7951** *(+6.15%)* | — | — |
 
 ---
 
