@@ -56,8 +56,9 @@ class GradCAMPlusPlusEngine:
 
     def _forward_hook(self, module, input, output):
         self.activations = output
-        # Hook directly onto the activation tensor to avoid in-place ReLU conflicts
-        output.register_hook(self._save_gradient)
+        # Hook directly onto the activation tensor only if gradients are required
+        if output.requires_grad:
+            output.register_hook(self._save_gradient)
 
     def _save_gradient(self, grad):
         self.gradients = grad
