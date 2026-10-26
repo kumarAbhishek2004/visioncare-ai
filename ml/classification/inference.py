@@ -55,6 +55,8 @@ class DenseNet121Classifier(nn.Module):
             self.classifier = native.classifier
 
     def _build_native_densenet(self, num_classes: int) -> nn.Module:
+        from collections import OrderedDict
+
         class _DenseLayer(nn.Module):
             def __init__(self, in_features: int, growth_rate: int):
                 super().__init__()
@@ -65,42 +67,42 @@ class DenseNet121Classifier(nn.Module):
                 self.relu2 = nn.ReLU(inplace=True)
                 self.conv2 = nn.Conv2d(4 * growth_rate, growth_rate, kernel_size=3, padding=1, bias=False)
 
-            def forward(self, x):
+            def forward(self, x: torch.Tensor) -> torch.Tensor:
                 out = self.conv1(self.relu1(self.norm1(x)))
                 out = self.conv2(self.relu2(self.norm2(out)))
-                return torch.cat([x, out], 1)
+                return out
 
-        class _DenseBlock(nn.Module):
+        class _DenseBlock(nn.ModuleDict):
             def __init__(self, num_layers: int, in_features: int, growth_rate: int):
                 super().__init__()
-                layers = [
-                    _DenseLayer(in_features + i * growth_rate, growth_rate)
-                    for i in range(num_layers)
-                ]
-                self.block = nn.Sequential(*layers)
+                for i in range(num_layers):
+                    layer = _DenseLayer(in_features + i * growth_rate, growth_rate)
+                    self.add_module(f"denselayer{i + 1}", layer)
 
-            def forward(self, x):
-                return self.block(x)
+            def forward(self, init_features: torch.Tensor) -> torch.Tensor:
+                features = [init_features]
+                for name, layer in self.items():
+                    new_features = layer(torch.cat(features, 1))
+                    features.append(new_features)
+                return torch.cat(features, 1)
 
-        class _Transition(nn.Module):
+        class _Transition(nn.Sequential):
             def __init__(self, in_features: int, out_features: int):
                 super().__init__()
-                self.norm = nn.BatchNorm2d(in_features)
-                self.relu = nn.ReLU(inplace=True)
-                self.conv = nn.Conv2d(in_features, out_features, kernel_size=1, bias=False)
-                self.pool = nn.AvgPool2d(kernel_size=2, stride=2)
-
-            def forward(self, x):
-                return self.pool(self.conv(self.relu(self.norm(x))))
+                self.add_module("norm", nn.BatchNorm2d(in_features))
+                self.add_module("relu", nn.ReLU(inplace=True))
+                self.add_module("conv", nn.Conv2d(in_features, out_features, kernel_size=1, bias=False))
+                self.add_module("pool", nn.AvgPool2d(kernel_size=2, stride=2))
 
         class NativeDenseNet121(nn.Module):
             def __init__(self, num_classes: int = 14):
                 super().__init__()
-                self.features = nn.Sequential()
-                self.features.add_module("0", nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False))
-                self.features.add_module("1", nn.BatchNorm2d(64))
-                self.features.add_module("2", nn.ReLU(inplace=True))
-                self.features.add_module("3", nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
+                self.features = nn.Sequential(OrderedDict([
+                    ("conv0", nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)),
+                    ("norm0", nn.BatchNorm2d(64)),
+                    ("relu0", nn.ReLU(inplace=True)),
+                    ("pool0", nn.MaxPool2d(kernel_size=3, stride=2, padding=1)),
+                ]))
 
                 num_features = 64
                 growth_rate = 32
@@ -178,8 +180,21 @@ class DiseaseClassifier:
             with open(thresholds_path, "r") as f:
                 self.thresholds = json.load(f)
 
+        # Detect model input resolution (384x384 for V2 High-Performance, 224x224 for V1)
+        self.input_size = (384, 384)
+        metrics_path = os.path.join(os.path.dirname(weights_path), "validation_metrics.json")
+        if os.path.exists(metrics_path):
+            try:
+                with open(metrics_path, "r") as f:
+                    metrics = json.load(f)
+                    res_str = metrics.get("input_resolution", "384x384")
+                    if "224" in res_str:
+                        self.input_size = (224, 224)
+            except Exception:
+                pass
+
     def preprocess(self, image: Union[np.ndarray, Image.Image]) -> torch.Tensor:
-        """Resizes to 224x224 and applies ImageNet normalization."""
+        """Resizes to target resolution (384x384 or 224x224) and applies ImageNet normalization."""
         if isinstance(image, Image.Image):
             image = np.array(image)
         if len(image.shape) == 2:
@@ -187,7 +202,7 @@ class DiseaseClassifier:
         elif image.shape[2] == 4:
             image = cv2.cvtColor(image, cv2.COLOR_RGBA2RGB)
 
-        resized = cv2.resize(image, (224, 224), interpolation=cv2.INTER_LINEAR)
+        resized = cv2.resize(image, self.input_size, interpolation=cv2.INTER_LINEAR)
         arr = resized.astype(np.float32) / 255.0
 
         tensor = torch.from_numpy(arr).permute(2, 0, 1).float()
@@ -196,14 +211,21 @@ class DiseaseClassifier:
 
         return tensor.unsqueeze(0).to(self.device)
 
-    def predict(self, image: Union[np.ndarray, Image.Image]) -> Dict[str, Any]:
+    def predict(self, image: Union[np.ndarray, Image.Image], use_tta: bool = True) -> Dict[str, Any]:
         """
-        Executes multi-label inference with confidence calibration and safety triage.
+        Executes multi-label inference with optional Test-Time Augmentation (TTA),
+        confidence calibration via Platt temperature scaling, and safety triage.
         """
         tensor = self.preprocess(image)
 
         with torch.no_grad():
-            raw_logits = self.model(tensor).squeeze(0).cpu()
+            if use_tta:
+                tensor_flip = torch.flip(tensor, dims=[3])
+                logits_orig = self.model(tensor).squeeze(0)
+                logits_flip = self.model(tensor_flip).squeeze(0)
+                raw_logits = ((logits_orig + logits_flip) * 0.5).cpu()
+            else:
+                raw_logits = self.model(tensor).squeeze(0).cpu()
 
         # 1. Apply Temperature Scaling calibration
         scaled_logits = torch.zeros_like(raw_logits)

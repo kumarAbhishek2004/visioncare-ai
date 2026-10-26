@@ -7,10 +7,10 @@
     "Nodule": 0.3321,
     "Pneumonia": 0.3156,
     "Pneumothorax": 0.3947,
-    "Consolidation": 0.3210,
+    "Consolidation": 0.321,
     "Edema": 0.4016,
     "Emphysema": 0.3525,
-    "Fibrosis": 0.3690,
+    "Fibrosis": 0.369,
     "Pleural_Thickening": 0.3903,
     "Hernia": 0.2577
 }

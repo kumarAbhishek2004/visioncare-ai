@@ -41,25 +41,25 @@ flowchart TD
 
 ---
 
-## 📊 Validation Metrics Summary (Baseline Model)
+## 📊 Validation Metrics Summary (V2 High-Performance Model)
 
-| Pathology | Validation AUROC | Optimal Cutoff ($\tau^*$) | Temperature ($T$) |
-| :--- | :---: | :---: | :---: |
-| **Edema** | **0.8410** | 0.2454 | 0.6140 |
-| **Pneumothorax** | **0.8165** | 0.1780 | 0.6100 |
-| **Emphysema** | **0.8087** | 0.1000 | 0.5673 |
-| **Effusion** | **0.8045** | 0.4680 | 0.9939 |
-| **Atelectasis** | 0.7406 | 0.5615 | 1.1517 |
-| **Mass** | 0.7370 | 0.5641 | 1.2282 |
-| **Fibrosis** | 0.7365 | 0.4000 | 0.3401 |
-| **Cardiomegaly** | 0.7357 | 0.1370 | 0.5168 |
-| **Consolidation** | 0.6986 | 0.1462 | 0.6631 |
-| **Infiltration** | 0.6925 | 0.4430 | 0.6521 |
-| **Pleural Thickening** | 0.6905 | 0.2000 | 0.4320 |
-| **Pneumonia** | 0.6834 | 0.1000 | 0.3731 |
-| **Hernia** | 0.6671 | 0.1000 | 0.4050 |
-| **Nodule** | 0.6178 | 0.5580 | 1.3762 |
-| **OVERALL MEAN AUROC** | **0.7336** | — | — |
+| Pathology | V1 Baseline AUROC | V2 Validation AUROC (TTA) | Optimal Cutoff ($\tau^*$) | Temperature ($T$) | Improvement |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Hernia** | 0.6671 | **0.8830** | 0.2577 | 0.9549 | **+0.2159** |
+| **Edema** | 0.8410 | **0.8714** | 0.4016 | 0.9617 | **+0.0304** |
+| **Cardiomegaly** | 0.7357 | **0.8645** | 0.3588 | 0.9637 | **+0.1288** |
+| **Effusion** | 0.8045 | **0.8600** | 0.4913 | 0.9802 | **+0.0555** |
+| **Emphysema** | 0.8087 | **0.8527** | 0.3525 | 0.9618 | **+0.0440** |
+| **Pneumothorax** | 0.8165 | **0.8413** | 0.3947 | 0.9645 | **+0.0248** |
+| **Mass** | 0.7370 | **0.8160** | 0.3936 | 0.9659 | **+0.0790** |
+| **Atelectasis** | 0.7406 | **0.7996** | 0.4992 | 0.9875 | **+0.0590** |
+| **Pleural Thickening** | 0.6905 | **0.7677** | 0.3903 | 0.9671 | **+0.0772** |
+| **Fibrosis** | 0.7365 | **0.7432** | 0.3690 | 0.9617 | **+0.0067** |
+| **Consolidation** | 0.6986 | **0.7387** | 0.3210 | 0.9619 | **+0.0401** |
+| **Pneumonia** | 0.6834 | **0.7353** | 0.3156 | 0.9585 | **+0.0519** |
+| **Infiltration** | 0.6925 | **0.6950** | 0.4843 | 0.9925 | **+0.0025** |
+| **Nodule** | 0.6178 | **0.6626** | 0.3321 | 0.9644 | **+0.0448** |
+| **OVERALL MEAN AUROC** | **0.7336** | **0.7951** | — | — | **+0.0615 (+6.2%)** |
 
 *See [`docs/MODEL_CARD.md`](docs/MODEL_CARD.md) for complete clinical methodology, mathematical formulations, and evaluation protocol.*
 
