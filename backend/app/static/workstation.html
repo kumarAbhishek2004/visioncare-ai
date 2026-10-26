@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VisionCare AI — Radiology Workstation & Clinical Decision Support</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              900: '#1e3a8a',
+            },
+            radDark: {
+              950: '#07090e',
+              900: '#0c1017',
+              850: '#111722',
+              800: '#161e2e',
+              700: '#243048',
+              600: '#334155',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom Scrollbars for PACS viewer feel */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0c1017; }
+    ::-webkit-scrollbar-thumb { background: #243048; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
+    .glass-panel {
+      background: rgba(17, 23, 34, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+  </style>
+</head>
+<body class="bg-radDark-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-blue-600 selection:text-white">
+
+  <!-- ================= TOP CLINICAL WORKSTATION HEADER ================= -->
+  <header class="bg-radDark-900 border-b border-radDark-700 px-6 py-3 flex items-center justify-between sticky top-0 z-50 shadow-lg">
+    <div class="flex items-center space-x-4">
+      <div class="w-10 h-10 rounded-lg bg-gradient-to-tr from-blue-700 to-cyan-500 flex items-center justify-center shadow-md shadow-blue-500/20">
+        <i data-lucide="activity" class="w-6 h-6 text-white"></i>
+      </div>
+      <div>
+        <div class="flex items-center space-x-2">
+          <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+            VisionCare AI
+            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">
+              v1.0 SaMD CDS
+            </span>
+          </h1>
+        </div>
+        <p class="text-xs text-slate-400">Explainable AI-Assisted Radiology Workstation • Frontal CXR NIH-14</p>
+      </div>
+    </div>
+
+    <!-- Active Patient Header Metadata -->
+    <div id="patient-meta-bar" class="hidden md:flex items-center space-x-6 text-xs bg-radDark-850 px-4 py-2 rounded-lg border border-radDark-700">
+      <div><span class="text-slate-500 uppercase font-mono">Patient:</span> <span id="hdr-patient-id" class="font-semibold text-slate-200">PT-DEMO-9042</span></div>
+      <div><span class="text-slate-500 uppercase font-mono">Age/Sex:</span> <span id="hdr-demographics" class="font-semibold text-slate-200">62Y / M</span></div>
+      <div><span class="text-slate-500 uppercase font-mono">View:</span> <span id="hdr-view" class="font-semibold text-slate-200">PA Frontal</span></div>
+      <div><span class="text-slate-500 uppercase font-mono">Study ID:</span> <span id="hdr-study-id" class="font-mono text-cyan-400">STD-READY</span></div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex items-center space-x-3">
+      <label for="file-upload-input" class="cursor-pointer inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-sm transition">
+        <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+        <span>Upload Radiograph</span>
+        <input id="file-upload-input" type="file" accept="image/*" class="hidden" onchange="handleFileUpload(event)">
+      </label>
+
+      <button id="btn-sample-scan" onclick="loadSampleScan()" class="inline-flex items-center space-x-2 bg-radDark-800 hover:bg-radDark-700 text-slate-300 text-xs font-semibold px-3 py-2.5 rounded-lg border border-radDark-700 transition">
+        <i data-lucide="sparkles" class="w-4 h-4 text-cyan-400"></i>
+        <span>Load Sample</span>
+      </button>
+
+      <button id="btn-export-pdf" onclick="downloadCurrentPDF()" disabled class="disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center space-x-2 bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-sm transition">
+        <i data-lucide="file-down" class="w-4 h-4"></i>
+        <span>Export Clinical PDF</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ================= CLINICAL SAFETY TRIAGE BANNER ================= -->
+  <div id="safety-triage-banner" class="hidden px-6 py-2.5 border-b text-xs flex items-center justify-between transition-all duration-300">
+    <div class="flex items-center space-x-3">
+      <div id="triage-icon-container" class="p-1 rounded"></div>
+      <div>
+        <span id="triage-headline" class="font-bold text-sm"></span>
+        <span id="triage-subtext" class="ml-2 text-slate-300"></span>
+      </div>
+    </div>
+    <div class="flex items-center space-x-4">
+      <span id="triage-iqa-badge" class="font-mono px-2 py-0.5 rounded bg-black/30"></span>
+      <span id="triage-reliability-badge" class="font-mono px-2 py-0.5 rounded bg-black/30"></span>
+    </div>
+  </div>
+
+  <!-- ================= MAIN WORKSTATION 3-COLUMN WORKSPACE ================= -->
+  <main class="flex-1 grid grid-cols-1 xl:grid-cols-12 gap-4 p-4 min-h-0 overflow-y-auto">
+
+    <!-- LEFT COLUMN: VIEWPORT & IMAGE TOOLS (Col 1 to 6) -->
+    <div class="xl:col-span-6 flex flex-col space-y-4">
+      
+      <!-- Synchronized PACS Viewport Card -->
+      <div class="glass-panel rounded-xl p-4 flex flex-col flex-1 shadow-xl">
+        <div class="flex items-center justify-between pb-3 border-b border-radDark-700">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="scan" class="w-5 h-5 text-cyan-400"></i>
+            <h2 class="text-sm font-semibold tracking-wide uppercase text-slate-200">Diagnostic Multi-View Viewport</h2>
+          </div>
+          <!-- Viewport Mode Tabs -->
+          <div class="flex bg-radDark-900 p-0.5 rounded-lg border border-radDark-700 text-xs">
+            <button onclick="switchViewMode('original')" id="tab-original" class="px-2.5 py-1 rounded font-medium text-slate-400 hover:text-white transition">Original</button>
+            <button onclick="switchViewMode('enhanced')" id="tab-enhanced" class="px-2.5 py-1 rounded font-medium text-slate-400 hover:text-white transition">CLAHE</button>
+            <button onclick="switchViewMode('mask')" id="tab-mask" class="px-2.5 py-1 rounded font-medium text-slate-400 hover:text-white transition">Lung Field</button>
+            <button onclick="switchViewMode('cam')" id="tab-cam" class="px-2.5 py-1 rounded font-medium bg-blue-600 text-white transition">Grad-CAM++</button>
+          </div>
+        </div>
+
+        <!-- Canvas / Viewer Area -->
+        <div class="relative flex-1 min-h-[460px] bg-black rounded-lg mt-3 overflow-hidden border border-radDark-700 flex items-center justify-center group">
+          
+          <!-- Empty State -->
+          <div id="viewer-empty-state" class="flex flex-col items-center justify-center text-slate-500 space-y-3 p-8 text-center">
+            <div class="w-16 h-16 rounded-full bg-radDark-800 flex items-center justify-center border border-radDark-700">
+              <i data-lucide="image-plus" class="w-8 h-8 text-slate-400"></i>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-slate-300">No Radiograph Active</p>
+              <p class="text-xs text-slate-500 mt-1">Upload a chest radiograph or click "Load Sample" to begin AI CDS analysis.</p>
+            </div>
+          </div>
+
+          <!-- Loading Spinner -->
+          <div id="viewer-loading" class="hidden absolute inset-0 bg-radDark-950/80 backdrop-blur-sm flex flex-col items-center justify-center z-30">
+            <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            <p id="loading-stage-text" class="text-xs text-blue-300 font-mono mt-4 animate-pulse">Running Full Multi-Stage Inference Pipeline (< 2.5s)...</p>
+          </div>
+
+          <!-- Base Image Element -->
+          <img id="main-viewport-img" src="" alt="Active View" class="hidden max-h-[520px] max-w-full object-contain select-none transition-all duration-150">
+
+          <!-- Heatmap Overlay Element (for smooth opacity blending) -->
+          <img id="overlay-heatmap-img" src="" alt="Heatmap Overlay" class="hidden absolute max-h-[520px] max-w-full object-contain pointer-events-none mix-blend-screen transition-opacity duration-150">
+
+          <!-- Diagnostic Overlay HUD Badges -->
+          <div id="viewport-hud" class="hidden absolute top-3 left-3 flex flex-col space-y-1 z-10 pointer-events-none">
+            <span id="hud-mode-pill" class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-black/60 backdrop-blur border border-white/10 text-cyan-400">GRAD-CAM++ HEATMAP</span>
+            <span id="hud-iqa-pill" class="text-[10px] font-mono px-2 py-0.5 rounded bg-black/60 backdrop-blur border border-white/10 text-slate-300">IQA: --/100</span>
+          </div>
+
+          <!-- Lesion Bounding Box Overlay Box (SVG Layer) -->
+          <svg id="viewport-svg-overlay" class="absolute inset-0 w-full h-full pointer-events-none hidden"></svg>
+        </div>
+
+        <!-- Viewport Controls & Opacity Slider -->
+        <div class="mt-3 flex items-center justify-between text-xs pt-2 border-t border-radDark-700">
+          <div class="flex items-center space-x-3 w-1/2">
+            <span class="text-slate-400 font-medium">CAM Opacity:</span>
+            <input id="cam-opacity-slider" type="range" min="0" max="100" value="70" oninput="handleOpacityChange(this.value)" class="w-32 h-1.5 bg-radDark-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
+            <span id="cam-opacity-val" class="font-mono text-blue-400 w-8">70%</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button onclick="toggleInvert()" class="p-1.5 rounded hover:bg-radDark-700 text-slate-400 hover:text-white" title="Invert Grayscale">
+              <i data-lucide="sun-moon" class="w-4 h-4"></i>
+            </button>
+            <button onclick="resetViewport()" class="p-1.5 rounded hover:bg-radDark-700 text-slate-400 hover:text-white" title="Reset Viewer">
+              <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- IQA Metric Diagnostic Strip -->
+      <div class="glass-panel rounded-xl p-4 shadow-xl">
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 mb-3">
+          <i data-lucide="gauge" class="w-4 h-4 text-emerald-400"></i>
+          Image Quality Assessment (IQA) & Pre-Screening
+        </h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+          <div class="bg-radDark-900 p-2.5 rounded-lg border border-radDark-700">
+            <p class="text-[10px] text-slate-400 uppercase">Composite Score</p>
+            <p id="iqa-score-disp" class="text-base font-bold text-slate-200 mt-0.5">--</p>
+          </div>
+          <div class="bg-radDark-900 p-2.5 rounded-lg border border-radDark-700">
+            <p class="text-[10px] text-slate-400 uppercase">Laplacian Sharpness</p>
+            <p id="iqa-sharpness-disp" class="text-base font-bold text-slate-200 mt-0.5">--</p>
+          </div>
+          <div class="bg-radDark-900 p-2.5 rounded-lg border border-radDark-700">
+            <p class="text-[10px] text-slate-400 uppercase">Michelson Contrast</p>
+            <p id="iqa-contrast-disp" class="text-base font-bold text-slate-200 mt-0.5">--</p>
+          </div>
+          <div class="bg-radDark-900 p-2.5 rounded-lg border border-radDark-700">
+            <p class="text-[10px] text-slate-400 uppercase">Dynamic Range</p>
+            <p id="iqa-range-disp" class="text-base font-bold text-slate-200 mt-0.5">--</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MIDDLE COLUMN: 14-PATHOLOGY MATRIX & ANATOMICAL LOCALIZATION (Col 7 to 9) -->
+    <div class="xl:col-span-3 flex flex-col space-y-4">
+      
+      <!-- 14 Pathologies Probability Matrix Card -->
+      <div class="glass-panel rounded-xl p-4 flex flex-col flex-1 shadow-xl">
+        <div class="flex items-center justify-between pb-3 border-b border-radDark-700">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="bar-chart-2" class="w-5 h-5 text-indigo-400"></i>
+            <h2 class="text-sm font-semibold tracking-wide uppercase text-slate-200">14-Pathology Differentials</h2>
+          </div>
+          <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Calibrated &sigma;(z/T)</span>
+        </div>
+
+        <p class="text-[11px] text-slate-400 mt-2 mb-3">Independent multi-label calibrated probabilities with Youden operating cutoffs.</p>
+
+        <!-- Scrollable Disease Bars -->
+        <div id="disease-matrix-container" class="flex-1 space-y-2 overflow-y-auto pr-1 max-h-[460px]">
+          <div class="text-center py-12 text-slate-500 text-xs">Run analysis to populate disease differentials.</div>
+        </div>
+      </div>
+
+      <!-- 5-Zone Anatomical Localization Card -->
+      <div class="glass-panel rounded-xl p-4 shadow-xl">
+        <div class="flex items-center justify-between pb-2 border-b border-radDark-700">
+          <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+            <i data-lucide="crosshair" class="w-4 h-4 text-amber-400"></i>
+            5-Zone Anatomical Distribution
+          </h3>
+          <span id="primary-zone-badge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">--</span>
+        </div>
+
+        <div id="zone-bars-container" class="mt-3 space-y-2 text-xs">
+          <!-- Zone rows injected here -->
+          <div class="text-slate-500 text-center py-4 text-xs">Zone mapping active after inference.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: STRUCTURED CLINICAL REPORT & AUDIT TRACE (Col 10 to 12) -->
+    <div class="xl:col-span-3 flex flex-col space-y-4">
+      
+      <!-- Structured ACR Clinical Report -->
+      <div class="glass-panel rounded-xl p-4 flex flex-col flex-1 shadow-xl">
+        <div class="flex items-center justify-between pb-3 border-b border-radDark-700">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="clipboard-list" class="w-5 h-5 text-cyan-400"></i>
+            <h2 class="text-sm font-semibold tracking-wide uppercase text-slate-200">ACR Clinical Narrative</h2>
+          </div>
+          <span id="llm-badge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">Gemini 2.5 CDS</span>
+        </div>
+
+        <div id="clinical-report-container" class="mt-3 space-y-3 overflow-y-auto pr-1 flex-1 text-xs">
+          <div class="text-center py-12 text-slate-500">Structured narrative will be generated upon study execution.</div>
+        </div>
+      </div>
+
+      <!-- 7-Step FDA SaMD / EU AI Act Audit Trace -->
+      <div class="glass-panel rounded-xl p-4 shadow-xl">
+        <div class="flex items-center justify-between pb-2 border-b border-radDark-700">
+          <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+            <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
+            Auditable Decision Trace
+          </h3>
+          <span id="trace-step-count" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">7 Steps</span>
+        </div>
+
+        <div id="audit-trace-container" class="mt-3 space-y-2 max-h-48 overflow-y-auto pr-1 text-xs">
+          <div class="text-slate-500 text-center py-4">Trace log records each inference stage.</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ================= INLINE LOGIC & API INTEGRATION ================= -->
+  <script>
+    // State
+    let currentStudyData = null;
+    let currentActiveMode = 'cam';
+    let isInverted = false;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      lucide.createIcons();
+    });
+
+    // Switch View Mode (Original, CLAHE, Lung Field, Grad-CAM++)
+    function switchViewMode(mode) {
+      if (!currentStudyData) return;
+      currentActiveMode = mode;
+
+      const tabs = ['original', 'enhanced', 'mask', 'cam'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`tab-${t}`);
+        if (t === mode) {
+          btn.className = "px-2.5 py-1 rounded font-medium bg-blue-600 text-white transition";
+        } else {
+          btn.className = "px-2.5 py-1 rounded font-medium text-slate-400 hover:text-white transition";
+        }
+      });
+
+      const mainImg = document.getElementById("main-viewport-img");
+      const overlayImg = document.getElementById("overlay-heatmap-img");
+      const hudPill = document.getElementById("hud-mode-pill");
+      const assets = currentStudyData.image_assets;
+
+      overlayImg.classList.add("hidden");
+
+      if (mode === 'original') {
+        mainImg.src = assets.original;
+        hudPill.innerText = "ORIGINAL RADIOGRAPH (PA)";
+      } else if (mode === 'enhanced') {
+        mainImg.src = assets.enhanced;
+        hudPill.innerText = "CLAHE DIAGNOSTIC OPTIMIZED";
+      } else if (mode === 'mask') {
+        mainImg.src = assets.overlay_mask;
+        hudPill.innerText = "PULMONARY PARENCHYMA MASK";
+      } else if (mode === 'cam') {
+        mainImg.src = assets.original;
+        overlayImg.src = assets.heatmap_overlay;
+        overlayImg.classList.remove("hidden");
+        hudPill.innerText = "GRAD-CAM++ HEATMAP ATTRIBUTION";
+      }
+    }
+
+    function handleOpacityChange(val) {
+      document.getElementById("cam-opacity-val").innerText = `${val}%`;
+      const overlayImg = document.getElementById("overlay-heatmap-img");
+      overlayImg.style.opacity = val / 100.0;
+    }
+
+    function toggleInvert() {
+      isInverted = !isInverted;
+      const mainImg = document.getElementById("main-viewport-img");
+      mainImg.style.filter = isInverted ? "invert(1)" : "none";
+    }
+
+    function resetViewport() {
+      isInverted = false;
+      const mainImg = document.getElementById("main-viewport-img");
+      mainImg.style.filter = "none";
+      const slider = document.getElementById("cam-opacity-slider");
+      slider.value = 70;
+      handleOpacityChange(70);
+      switchViewMode('cam');
+    }
+
+    // Load Pre-packaged Synthetic Sample CXR
+    async function loadSampleScan() {
+      showLoading(true, "Generating Synthetic Frontal Radiograph with Focal Opacity...");
+      try {
+        // Draw synthetic radiograph on a temporary canvas
+        const canvas = document.createElement("canvas");
+        canvas.width = 512;
+        canvas.height = 512;
+        const ctx = canvas.getContext("2d");
+
+        // Background
+        ctx.fillStyle = "#191919";
+        ctx.fillRect(0, 0, 512, 512);
+
+        // Thoracic rib cage contour
+        ctx.fillStyle = "#6e6e6e";
+        ctx.beginPath();
+        ctx.ellipse(256, 256, 215, 230, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Left & Right Lung fields
+        ctx.fillStyle = "#282828";
+        ctx.beginPath();
+        ctx.ellipse(160, 256, 80, 150, -0.08, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.ellipse(352, 256, 80, 150, 0.08, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Focal Pneumonia / Consolidation Opacity in Left Lower Zone
+        ctx.fillStyle = "#8c8c8c";
+        ctx.beginPath();
+        ctx.arc(150, 350, 32, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Convert canvas to Blob
+        canvas.toBlob(async (blob) => {
+          const file = new File([blob], "synthetic_sample_cxr.png", { type: "image/png" });
+          await submitAnalysis(file, "PT-RAD-9042", 62, "M", "PA");
+        }, "image/png");
+
+      } catch (err) {
+        alert("Failed to create sample: " + err);
+        showLoading(false);
+      }
+    }
+
+    function handleFileUpload(e) {
+      const file = e.target.files[0];
+      if (file) {
+        submitAnalysis(file, "PT-NEW-" + Math.floor(1000 + Math.random() * 9000), 58, "F", "PA");
+      }
+    }
+
+    async function submitAnalysis(file, patientId, age, gender, view) {
+      showLoading(true, "Executing 6-Stage Deep Learning & Explainability Pipeline...");
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("patient_id", patientId);
+      formData.append("age", age);
+      formData.append("gender", gender);
+      formData.append("view_position", view);
+
+      try {
+        const resp = await fetch("/api/v1/studies/analyze", {
+          method: "POST",
+          body: formData
+        });
+
+        if (!resp.ok) {
+          const errDetail = await resp.text();
+          throw new Error(`Server returned code ${resp.status}: ${errDetail}`);
+        }
+
+        const data = await resp.json();
+        currentStudyData = data;
+        renderStudyResults(data);
+        showLoading(false);
+      } catch (err) {
+        alert("Inference Error: " + err.message);
+        showLoading(false);
+      }
+    }
+
+    function renderStudyResults(data) {
+      // 1. Header Bar
+      document.getElementById("patient-meta-bar").classList.remove("hidden");
+      document.getElementById("hdr-patient-id").innerText = data.patient_id;
+      document.getElementById("hdr-demographics").innerText = `${data.demographics.age}Y / ${data.demographics.gender}`;
+      document.getElementById("hdr-view").innerText = `${data.demographics.view_position} Frontal`;
+      document.getElementById("hdr-study-id").innerText = data.study_id;
+      document.getElementById("btn-export-pdf").disabled = false;
+
+      // 2. Safety Triage Banner
+      const banner = document.getElementById("safety-triage-banner");
+      const headline = document.getElementById("triage-headline");
+      const subtext = document.getElementById("triage-subtext");
+      const iqaBadge = document.getElementById("triage-iqa-badge");
+      const relBadge = document.getElementById("triage-reliability-badge");
+      const iconContainer = document.getElementById("triage-icon-container");
+
+      banner.classList.remove("hidden");
+      iqaBadge.innerText = `IQA: ${data.iqa.overall_score}/100 (${data.iqa.quality_tier})`;
+      relBadge.innerText = `RELIABILITY: ${data.classification.prediction_reliability}`;
+
+      if (data.classification.safety_triage === "ASSISTED_REVIEW_READY") {
+        banner.className = "px-6 py-2.5 border-b text-xs flex items-center justify-between transition-all duration-300 bg-emerald-950/70 border-emerald-800 text-emerald-200";
+        headline.innerText = "ASSISTED REVIEW READY";
+        subtext.innerText = "Model predictions exceed reliability thresholds. Calibrated probabilities ready for radiologist verification.";
+        iconContainer.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>';
+      } else {
+        banner.className = "px-6 py-2.5 border-b text-xs flex items-center justify-between transition-all duration-300 bg-amber-950/80 border-amber-800 text-amber-200";
+        headline.innerText = "MANUAL REVIEW MANDATORY";
+        subtext.innerText = "Borderline confidence or high diagnostic uncertainty detected. Manual physician review is clinically mandated.";
+        iconContainer.innerHTML = '<i data-lucide="alert-triangle" class="w-5 h-5 text-amber-400"></i>';
+      }
+
+      // 3. Viewport HUD & Base Images
+      document.getElementById("viewer-empty-state").classList.add("hidden");
+      document.getElementById("main-viewport-img").classList.remove("hidden");
+      document.getElementById("viewport-hud").classList.remove("hidden");
+      document.getElementById("hud-iqa-pill").innerText = `IQA: ${data.iqa.overall_score}/100`;
+
+      switchViewMode('cam');
+
+      // 4. IQA Metrics Strip
+      document.getElementById("iqa-score-disp").innerText = `${data.iqa.overall_score} / 100`;
+      document.getElementById("iqa-sharpness-disp").innerText = data.iqa.laplacian_variance.toFixed(1);
+      document.getElementById("iqa-contrast-disp").innerText = `${(data.iqa.michelson_contrast * 100).toFixed(1)}%`;
+      document.getElementById("iqa-range-disp").innerText = `${data.iqa.dynamic_range} Gy`;
+
+      // 5. 14-Pathology Differential Matrix
+      const matrixContainer = document.getElementById("disease-matrix-container");
+      matrixContainer.innerHTML = "";
+
+      const findings = data.classification.all_findings;
+      findings.forEach(f => {
+        const isPositive = f.is_detected;
+        const pct = f.probability_pct;
+        const threshPct = (f.threshold * 100).toFixed(1);
+
+        const row = document.createElement("div");
+        row.className = "bg-radDark-900/90 p-2 rounded-lg border border-radDark-700 flex flex-col space-y-1.5 transition hover:border-slate-500";
+
+        const barColor = isPositive 
+          ? "bg-gradient-to-r from-red-600 to-amber-500" 
+          : "bg-gradient-to-r from-slate-700 to-blue-600";
+
+        const badgeColor = isPositive 
+          ? "bg-red-500/20 text-red-400 border border-red-500/30" 
+          : "bg-slate-800 text-slate-400";
+
+        row.innerHTML = `
+          <div class="flex items-center justify-between text-xs">
+            <span class="font-medium text-slate-200 ${isPositive ? 'font-bold text-white' : ''}">${f.disease}</span>
+            <div class="flex items-center space-x-2">
+              <span class="font-mono text-[10px] text-slate-400">Cutoff: ${threshPct}%</span>
+              <span class="font-mono font-bold text-xs ${isPositive ? 'text-amber-400' : 'text-slate-300'}">${pct}%</span>
+              <span class="text-[9px] px-1.5 py-0.2 rounded font-mono ${badgeColor}">${isPositive ? 'DETECTED' : 'UNREMARKABLE'}</span>
+            </div>
+          </div>
+          <div class="w-full bg-radDark-800 rounded-full h-1.5 overflow-hidden">
+            <div class="${barColor} h-1.5 rounded-full transition-all duration-500" style="width: ${Math.min(pct, 100)}%"></div>
+          </div>
+        `;
+        matrixContainer.appendChild(row);
+      });
+
+      // 6. 5-Zone Anatomical Localization
+      const primaryBadge = document.getElementById("primary-zone-badge");
+      primaryBadge.innerText = `${data.explainability.primary_zone_name} (${data.explainability.primary_zone_percentage}%)`;
+
+      const zoneContainer = document.getElementById("zone-bars-container");
+      zoneContainer.innerHTML = "";
+      const zoneBreakdown = data.explainability.zone_breakdown_pct;
+      
+      for (const [zone, zPct] of Object.entries(zoneBreakdown)) {
+        const isPrimary = zone === data.explainability.primary_zone_name;
+        const zRow = document.createElement("div");
+        zRow.className = "flex items-center justify-between text-xs";
+        zRow.innerHTML = `
+          <span class="truncate w-32 ${isPrimary ? 'font-bold text-amber-300' : 'text-slate-400'}">${zone}</span>
+          <div class="flex-1 mx-2 bg-radDark-800 rounded-full h-1.5 overflow-hidden">
+            <div class="${isPrimary ? 'bg-amber-400' : 'bg-slate-600'} h-1.5 rounded-full" style="width: ${zPct}%"></div>
+          </div>
+          <span class="font-mono w-10 text-right ${isPrimary ? 'font-bold text-amber-300' : 'text-slate-400'}">${zPct}%</span>
+        `;
+        zoneContainer.appendChild(zRow);
+      }
+
+      // 7. Structured Clinical Report
+      const rep = data.clinical_report;
+      const repContainer = document.getElementById("clinical-report-container");
+      repContainer.innerHTML = `
+        <div class="bg-radDark-900 p-2.5 rounded-lg border border-radDark-700">
+          <p class="text-[10px] font-mono uppercase text-slate-400">TECHNIQUE</p>
+          <p class="text-slate-200 mt-1 leading-relaxed">${rep.technique}</p>
+        </div>
+        <div class="bg-radDark-900 p-2.5 rounded-lg border border-radDark-700">
+          <p class="text-[10px] font-mono uppercase text-slate-400">FINDINGS</p>
+          <p class="text-slate-200 mt-1 leading-relaxed">${rep.findings}</p>
+        </div>
+        <div class="bg-radDark-900 p-2.5 rounded-lg border border-cyan-800/40 bg-cyan-950/20">
+          <p class="text-[10px] font-mono uppercase text-cyan-400 font-bold">IMPRESSION</p>
+          <p class="text-cyan-100 mt-1 font-semibold leading-relaxed">${rep.impression}</p>
+        </div>
+        <div class="bg-radDark-900 p-2.5 rounded-lg border border-radDark-700">
+          <p class="text-[10px] font-mono uppercase text-slate-400">DIFFERENTIAL CONSIDERATIONS</p>
+          <ul class="list-disc list-inside mt-1 text-slate-300 space-y-0.5">
+            ${rep.differential_considerations.map(d => `<li>${d}</li>`).join('')}
+          </ul>
+        </div>
+        <div class="bg-radDark-900 p-2.5 rounded-lg border border-radDark-700">
+          <p class="text-[10px] font-mono uppercase text-slate-400">RECOMMENDATIONS</p>
+          <p class="text-slate-300 mt-1 leading-relaxed">${rep.recommendations}</p>
+        </div>
+        <div class="p-2 rounded bg-red-950/20 border border-red-900/40 text-[10px] text-red-300/80 leading-normal">
+          <span class="font-bold">REGULATORY DISCLAIMER:</span> ${rep.disclaimer}
+        </div>
+      `;
+
+      // 8. Auditable Decision Trace Steps
+      const traceContainer = document.getElementById("audit-trace-container");
+      traceContainer.innerHTML = "";
+      data.decision_trace.steps.forEach(s => {
+        const tRow = document.createElement("div");
+        tRow.className = "flex items-start space-x-2 p-1.5 rounded bg-radDark-900/70 border border-radDark-700/60 text-[11px]";
+        tRow.innerHTML = `
+          <span class="font-mono text-cyan-400 font-bold text-[10px] mt-0.5">S${s.step}</span>
+          <div class="flex-1">
+            <div class="flex items-center justify-between">
+              <span class="font-semibold text-slate-200">${s.module}</span>
+              <span class="font-mono text-[9px] px-1 rounded bg-emerald-900/40 text-emerald-300">${s.status}</span>
+            </div>
+            <p class="text-slate-400 text-[10px] mt-0.5">${s.summary}</p>
+          </div>
+        `;
+        traceContainer.appendChild(tRow);
+      });
+
+      lucide.createIcons();
+    }
+
+    function showLoading(show, message) {
+      const loader = document.getElementById("viewer-loading");
+      const text = document.getElementById("loading-stage-text");
+      if (show) {
+        text.innerText = message || "Processing...";
+        loader.classList.remove("hidden");
+      } else {
+        loader.classList.add("hidden");
+      }
+    }
+
+    function downloadCurrentPDF() {
+      if (!currentStudyData) return;
+      window.location.href = `/api/v1/studies/pdf/${currentStudyData.study_id}`;
+    }
+  </script>
+</body>
+</html>
