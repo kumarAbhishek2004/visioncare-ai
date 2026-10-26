@@ -22,11 +22,12 @@ An Explainable AI-assisted radiology assistant and clinical decision support sys
   - **Module 2 (Image Optimization):** `ml/enhancement/clahe_processor.py` — Non-generative CLAHE and Window/Level presets (`LUNG`, `MEDIASTINUM`, `BONE`).
   - **Module 3 (Pulmonary Extraction):** `ml/segmentation/monai_unet.py` — Pulmonary parenchyma mask, thoracic bounding envelope, and frontal scan validation.
   - **Module 4 (Classification & Safety):** `ml/classification/inference.py` — DenseNet-121 inference, independent calibrated probabilities, and Clinical Safety Triage gating.
-- [ ] **Phase 3: Explainability Engine & LLM Synthesizer** *(In Progress)*
-  - Grad-CAM++ feature attribution overlay ($1024 \times 1024$).
-  - 5-zone anatomical localization mapping (RUZ, RMZ, RLZ, LUZ, LLZ).
-  - Gemini 2.5 Flash structured clinical reporting and AI decision trace.
-- [ ] **Phase 4: Unified Backend API** *(Upcoming)*
+- [x] **Phase 3: Explainability Engine & LLM Synthesizer**
+  - **Module 5A (Grad-CAM++):** `ml/explainability/gradcam_engine.py` — Activation-tensor hooks, $1024 \times 1024$ continuous heatmaps, Otsu bounding boxes with metric sizing ($cm$).
+  - **Module 5B (Zone Mapper):** `ml/explainability/zone_mapper.py` — 5-zone anatomical localization (RUZ, RMZ, RLZ, LUZ, LLZ, Mediastinum) with spatial percentage attribution.
+  - **Module 5C (Decision Trace):** `ml/explainability/decision_trace.py` — 7-step FDA SaMD auditable decision trace.
+  - **Module 6 (Clinical Synthesizer):** `ml/llm/synthesizer.py` — Gemini 2.5 Flash structured reporting client with deterministic ACR clinical fallback.
+- [ ] **Phase 4: Unified Backend API** *(In Progress)*
   - FastAPI orchestration endpoint (`POST /api/v1/studies/analyze`).
   - ReportLab clinical PDF export service.
 - [ ] **Phase 5: Radiology Workstation Frontend** *(Upcoming)*
