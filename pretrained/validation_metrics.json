@@ -1,0 +1,60 @@
+{
+    "model_architecture": "DenseNet121",
+    "input_resolution": "224x224",
+    "training_subset_size": 47,
+    "validation_subset_size": 8,
+    "mean_validation_auroc": 0.5,
+    "class_wise_auroc": {
+        "Atelectasis": 0.5,
+        "Cardiomegaly": 0.5,
+        "Effusion": 0.5,
+        "Infiltration": 0.5,
+        "Mass": 0.5,
+        "Nodule": 0.5,
+        "Pneumonia": 0.5,
+        "Pneumothorax": 0.5,
+        "Consolidation": 0.5,
+        "Edema": 0.5,
+        "Emphysema": 0.5,
+        "Fibrosis": 0.5,
+        "Pleural_Thickening": 0.5,
+        "Hernia": 0.5
+    },
+    "temperature_scaling_parameters": {
+        "Atelectasis": 0.3428,
+        "Cardiomegaly": 0.2943,
+        "Effusion": 0.2901,
+        "Infiltration": 0.2963,
+        "Mass": 0.2933,
+        "Nodule": 0.3211,
+        "Pneumonia": 1.7413,
+        "Pneumothorax": 0.341,
+        "Consolidation": -0.5312,
+        "Edema": 0.3257,
+        "Emphysema": 0.3126,
+        "Fibrosis": 0.314,
+        "Pleural_Thickening": 0.3053,
+        "Hernia": 0.2942
+    },
+    "optimal_operating_thresholds": {
+        "Atelectasis": 0.5,
+        "Cardiomegaly": 0.5,
+        "Effusion": 0.5,
+        "Infiltration": 0.5,
+        "Mass": 0.5,
+        "Nodule": 0.5,
+        "Pneumonia": 0.85,
+        "Pneumothorax": 0.5,
+        "Consolidation": 0.85,
+        "Edema": 0.5,
+        "Emphysema": 0.5,
+        "Fibrosis": 0.5,
+        "Pleural_Thickening": 0.5,
+        "Hernia": 0.5
+    },
+    "localization_benchmark": {
+        "acc_iobb_10": 0.0,
+        "acc_iobb_25": 0.0,
+        "acc_iou_10": 0.0
+    }
+}
