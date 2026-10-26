@@ -92,3 +92,8 @@ desktop.ini
 *.tmp
 *.pdf
 !docs/*.pdf
+
+# Docker Configuration Files (Excluded per user request)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
