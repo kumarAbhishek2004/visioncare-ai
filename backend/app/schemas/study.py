@@ -15,6 +15,11 @@ class FindingItem(BaseModel):
     threshold: float
     is_detected: bool
     confidence_tier: str
+    ci_lower: Optional[float] = Field(default=None, description="95% Confidence Interval lower bound")
+    ci_upper: Optional[float] = Field(default=None, description="95% Confidence Interval upper bound")
+    epistemic_uncertainty: Optional[float] = Field(default=None, description="Test-time perturbation standard deviation")
+    decision_margin: Optional[float] = Field(default=None, description="Distance from operating threshold (P - Tau)")
+    boundary_stability: Optional[str] = Field(default=None, description="ROBUST, BORDERLINE, or CLEAR_NEGATIVE")
 
 
 class BBoxItem(BaseModel):
@@ -63,9 +68,31 @@ class StudyAnalysisResponse(BaseModel):
     pulmonary_extraction: Dict[str, Any]
     classification: Dict[str, Any]
     explainability: Dict[str, Any]
+    ctr: Optional[Dict[str, Any]] = Field(default=None, description="Quantitative Cardiothoracic Ratio Biometrics")
+    emergency_triage: Optional[Dict[str, Any]] = Field(default=None, description="ED STAT Clinical Triage Prioritization")
     clinical_report: ClinicalReportResponse
     decision_trace: DecisionTrace
     image_assets: Dict[str, str] = Field(
         default_factory=dict,
         description="Base64 encoded data URIs or paths for original, enhanced, mask, and heatmap overlay"
     )
+
+
+class BatchTriageItem(BaseModel):
+    study_id: str
+    patient_id: str
+    priority_tier: str
+    urgency_score: float
+    sla_turnaround: str
+    top_finding: str
+    reliability: str
+    ctr_percentage: Optional[float] = None
+    triage_summary: str
+
+
+class BatchTriageResponse(BaseModel):
+    total_studies: int
+    stat_critical_count: int
+    urgent_count: int
+    routine_count: int
+    worklist: List[BatchTriageItem]

@@ -81,7 +81,7 @@
       <label for="file-upload-input" class="cursor-pointer inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-sm transition">
         <i data-lucide="upload-cloud" class="w-4 h-4"></i>
         <span>Upload Radiograph</span>
-        <input id="file-upload-input" type="file" accept="image/*" class="hidden" onchange="handleFileUpload(event)">
+        <input id="file-upload-input" type="file" accept="image/*,.dcm" class="hidden" onchange="handleFileUpload(event)">
       </label>
 
       <button id="btn-sample-scan" onclick="loadSampleScan()" class="inline-flex items-center space-x-2 bg-radDark-800 hover:bg-radDark-700 text-slate-300 text-xs font-semibold px-3 py-2.5 rounded-lg border border-radDark-700 transition">
@@ -128,8 +128,10 @@
           <div class="flex bg-radDark-900 p-0.5 rounded-lg border border-radDark-700 text-xs">
             <button onclick="switchViewMode('original')" id="tab-original" class="px-2.5 py-1 rounded font-medium text-slate-400 hover:text-white transition">Original</button>
             <button onclick="switchViewMode('enhanced')" id="tab-enhanced" class="px-2.5 py-1 rounded font-medium text-slate-400 hover:text-white transition">CLAHE</button>
+            <button onclick="switchViewMode('bone')" id="tab-bone" class="px-2.5 py-1 rounded font-medium text-slate-400 hover:text-white transition">Bone/Edge</button>
             <button onclick="switchViewMode('mask')" id="tab-mask" class="px-2.5 py-1 rounded font-medium text-slate-400 hover:text-white transition">Lung Field</button>
-            <button onclick="switchViewMode('cam')" id="tab-cam" class="px-2.5 py-1 rounded font-medium bg-blue-600 text-white transition">Grad-CAM++</button>
+            <button onclick="switchViewMode('caliper')" id="tab-caliper" class="px-2.5 py-1 rounded font-medium text-slate-400 hover:text-white transition">CTR Caliper</button>
+            <button onclick="switchViewMode('cam')" id="tab-cam" class="px-2.5 py-1 rounded font-medium bg-blue-600 text-white transition">XAI Attrib</button>
           </div>
         </div>
 
@@ -209,6 +211,39 @@
           <div class="bg-radDark-900 p-2.5 rounded-lg border border-radDark-700">
             <p class="text-[10px] text-slate-400 uppercase">Dynamic Range</p>
             <p id="iqa-range-disp" class="text-base font-bold text-slate-200 mt-0.5">--</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- CTR Biometric & ED STAT Triage Strip -->
+      <div class="glass-panel rounded-xl p-4 shadow-xl">
+        <div class="flex items-center justify-between pb-2 border-b border-radDark-700 mb-3">
+          <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+            <i data-lucide="heart" class="w-4 h-4 text-rose-400"></i>
+            Cardiothoracic Ratio (CTR) & ED Triage Priority
+          </h3>
+          <span id="ctr-category-badge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-radDark-800 text-slate-400">CTR: --%</span>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
+          <div class="bg-radDark-900 p-2.5 rounded-lg border border-radDark-700">
+            <p class="text-[10px] text-slate-400 uppercase">CTR Percentage</p>
+            <p id="ctr-ratio-disp" class="text-base font-bold text-slate-200 mt-0.5">--%</p>
+          </div>
+          <div class="bg-radDark-900 p-2.5 rounded-lg border border-radDark-700">
+            <p class="text-[10px] text-slate-400 uppercase">Heart Diameter</p>
+            <p id="ctr-heart-cm-disp" class="text-base font-bold text-slate-200 mt-0.5">-- cm</p>
+          </div>
+          <div class="bg-radDark-900 p-2.5 rounded-lg border border-radDark-700">
+            <p class="text-[10px] text-slate-400 uppercase">Thorax Diameter</p>
+            <p id="ctr-thorax-cm-disp" class="text-base font-bold text-slate-200 mt-0.5">-- cm</p>
+          </div>
+          <div class="bg-radDark-900 p-2.5 rounded-lg border border-radDark-700">
+            <p class="text-[10px] text-slate-400 uppercase">Lung Symmetry</p>
+            <p id="ctr-symmetry-disp" class="text-base font-bold text-cyan-400 mt-0.5">--%</p>
+          </div>
+          <div class="bg-radDark-900 p-2.5 rounded-lg border border-radDark-700">
+            <p class="text-[10px] text-slate-400 uppercase">ED STAT Priority</p>
+            <p id="ed-priority-disp" class="text-base font-bold text-emerald-400 mt-0.5">ROUTINE</p>
           </div>
         </div>
       </div>
@@ -299,18 +334,20 @@
       lucide.createIcons();
     });
 
-    // Switch View Mode (Original, CLAHE, Lung Field, Grad-CAM++)
+    // Switch View Mode (Original, CLAHE, Lung Field, CTR Caliper, Grad-CAM++)
     function switchViewMode(mode) {
       if (!currentStudyData) return;
       currentActiveMode = mode;
 
-      const tabs = ['original', 'enhanced', 'mask', 'cam'];
+      const tabs = ['original', 'enhanced', 'bone', 'mask', 'caliper', 'cam'];
       tabs.forEach(t => {
         const btn = document.getElementById(`tab-${t}`);
-        if (t === mode) {
-          btn.className = "px-2.5 py-1 rounded font-medium bg-blue-600 text-white transition";
-        } else {
-          btn.className = "px-2.5 py-1 rounded font-medium text-slate-400 hover:text-white transition";
+        if (btn) {
+          if (t === mode) {
+            btn.className = "px-2.5 py-1 rounded font-medium bg-blue-600 text-white transition";
+          } else {
+            btn.className = "px-2.5 py-1 rounded font-medium text-slate-400 hover:text-white transition";
+          }
         }
       });
 
@@ -327,14 +364,21 @@
       } else if (mode === 'enhanced') {
         mainImg.src = assets.enhanced;
         hudPill.innerText = "CLAHE DIAGNOSTIC OPTIMIZED";
+      } else if (mode === 'bone') {
+        mainImg.src = assets.enhanced_bone || assets.enhanced;
+        hudPill.innerText = "BONE & PLEURAL EDGE SHARPENING";
       } else if (mode === 'mask') {
         mainImg.src = assets.overlay_mask;
         hudPill.innerText = "PULMONARY PARENCHYMA MASK";
+      } else if (mode === 'caliper') {
+        mainImg.src = assets.caliper_overlay || assets.original;
+        hudPill.innerText = "CARDIOTHORACIC RATIO (CTR) BIOMETRICS";
       } else if (mode === 'cam') {
         mainImg.src = assets.original;
         overlayImg.src = assets.heatmap_overlay;
         overlayImg.classList.remove("hidden");
-        hudPill.innerText = "GRAD-CAM++ HEATMAP ATTRIBUTION";
+        const methodStr = (currentStudyData.explainability && currentStudyData.explainability.xai_method) ? currentStudyData.explainability.xai_method.toUpperCase() : "GRAD-CAM++";
+        hudPill.innerText = `${methodStr} ATTRIBUTION MAP`;
       }
     }
 
@@ -493,15 +537,41 @@
       document.getElementById("iqa-contrast-disp").innerText = `${(data.iqa.michelson_contrast * 100).toFixed(1)}%`;
       document.getElementById("iqa-range-disp").innerText = `${data.iqa.dynamic_range} Gy`;
 
+      // 4B. CTR Metrics & ED STAT Triage
+      if (data.ctr) {
+        const ctrBadge = document.getElementById("ctr-category-badge");
+        ctrBadge.innerText = `CTR: ${data.ctr.ctr_percentage}% (${data.ctr.is_cardiomegaly ? 'CARDIOMEGALY' : 'NORMAL'})`;
+        ctrBadge.className = data.ctr.is_cardiomegaly 
+          ? "text-[10px] font-mono px-2 py-0.5 rounded bg-red-950/60 text-red-400 border border-red-800" 
+          : "text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-800";
+        document.getElementById("ctr-ratio-disp").innerText = `${data.ctr.ctr_percentage}%`;
+        document.getElementById("ctr-heart-cm-disp").innerText = `${data.ctr.cardiac_diameter_cm} cm`;
+        document.getElementById("ctr-thorax-cm-disp").innerText = `${data.ctr.thoracic_diameter_cm} cm`;
+      }
+      if (data.pulmonary_extraction && data.pulmonary_extraction.lung_symmetry_index !== undefined) {
+        document.getElementById("ctr-symmetry-disp").innerText = `${(data.pulmonary_extraction.lung_symmetry_index * 100).toFixed(0)}%`;
+      }
+      if (data.emergency_triage) {
+        const edDisp = document.getElementById("ed-priority-disp");
+        const pTier = data.emergency_triage.priority_tier;
+        edDisp.innerText = pTier.replace("_", " ");
+        if (pTier === 'STAT_CRITICAL') edDisp.className = "text-base font-bold text-red-500 mt-0.5 animate-pulse";
+        else if (pTier === 'URGENT') edDisp.className = "text-base font-bold text-amber-400 mt-0.5";
+        else edDisp.className = "text-base font-bold text-emerald-400 mt-0.5";
+      }
+
       // 5. 14-Pathology Differential Matrix
       const matrixContainer = document.getElementById("disease-matrix-container");
       matrixContainer.innerHTML = "";
 
-      const findings = data.classification.all_findings;
+      const findings = data.classification.all_predictions || data.classification.all_findings || [];
       findings.forEach(f => {
         const isPositive = f.is_detected;
         const pct = f.probability_pct;
         const threshPct = (f.threshold * 100).toFixed(1);
+        const ciText = (f.ci_lower !== undefined && f.ci_upper !== undefined) 
+          ? `95% CI: [${(f.ci_lower*100).toFixed(0)}%-${(f.ci_upper*100).toFixed(0)}%]`
+          : '';
 
         const row = document.createElement("div");
         row.className = "bg-radDark-900/90 p-2 rounded-lg border border-radDark-700 flex flex-col space-y-1.5 transition hover:border-slate-500";
@@ -516,7 +586,11 @@
 
         row.innerHTML = `
           <div class="flex items-center justify-between text-xs">
-            <span class="font-medium text-slate-200 ${isPositive ? 'font-bold text-white' : ''}">${f.disease}</span>
+            <div class="flex items-center space-x-1.5">
+              <span class="font-medium text-slate-200 ${isPositive ? 'font-bold text-white' : ''}">${f.disease}</span>
+              ${ciText ? `<span class="font-mono text-[9px] text-slate-400 bg-radDark-800 px-1 py-0.2 rounded">${ciText}</span>` : ''}
+              ${f.boundary_stability === 'ROBUST' ? `<span class="text-[8px] font-mono px-1 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">ROBUST</span>` : ''}
+            </div>
             <div class="flex items-center space-x-2">
               <span class="font-mono text-[10px] text-slate-400">Cutoff: ${threshPct}%</span>
               <span class="font-mono font-bold text-xs ${isPositive ? 'text-amber-400' : 'text-slate-300'}">${pct}%</span>

@@ -53,13 +53,25 @@ export const DifferentialsMatrix: React.FC<DifferentialsMatrixProps> = ({ findin
                 className="bg-radDark-900/90 p-2 rounded-lg border border-radDark-700 flex flex-col space-y-1.5 transition hover:border-slate-500"
               >
                 <div className="flex items-center justify-between text-xs">
-                  <span
-                    className={`font-medium ${
-                      isPositive ? "font-bold text-white" : "text-slate-200"
-                    }`}
-                  >
-                    {f.disease}
-                  </span>
+                  <div className="flex items-center space-x-1.5">
+                    <span
+                      className={`font-medium ${
+                        isPositive ? "font-bold text-white" : "text-slate-200"
+                      }`}
+                    >
+                      {f.disease}
+                    </span>
+                    {f.ci_lower !== undefined && f.ci_upper !== undefined && (
+                      <span className="font-mono text-[9px] text-slate-400 bg-radDark-800 px-1 py-0.2 rounded">
+                        CI: [{(f.ci_lower * 100).toFixed(0)}%-{(f.ci_upper * 100).toFixed(0)}%]
+                      </span>
+                    )}
+                    {f.boundary_stability === "ROBUST" && (
+                      <span className="text-[8px] font-mono px-1 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
+                        ROBUST
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center space-x-2">
                     <span className="font-mono text-[10px] text-slate-400">
                       Cutoff: {threshPct}%

@@ -202,7 +202,22 @@ class PulmonaryRegionExtractor:
         else:
             thoracic_bbox = [0, 0, orig_w, orig_h]
 
-        # 4. View / Confidence Sanity Check
+        # 4. Bilateral Lung Fields and Symmetry Analysis
+        mid_x = orig_w // 2
+        right_mask = np.zeros_like(lung_mask)
+        left_mask = np.zeros_like(lung_mask)
+        right_mask[:, :mid_x] = lung_mask[:, :mid_x]
+        left_mask[:, mid_x:]  = lung_mask[:, mid_x:]
+
+        right_pixels = int(np.sum(right_mask > 0))
+        left_pixels  = int(np.sum(left_mask > 0))
+        total_pixels = max(1, right_pixels + left_pixels)
+
+        right_ratio = float(right_pixels / (orig_h * orig_w))
+        left_ratio  = float(left_pixels / (orig_h * orig_w))
+        symmetry_index = round(min(right_pixels, left_pixels) / max(1, max(right_pixels, left_pixels)), 3)
+
+        # 5. View / Confidence Sanity Check
         lung_pixel_count = np.sum(lung_mask > 0)
         lung_area_ratio = float(lung_pixel_count / (orig_h * orig_w))
 
@@ -217,10 +232,15 @@ class PulmonaryRegionExtractor:
 
         return {
             "lung_mask": lung_mask,
+            "right_lung_mask": right_mask,
+            "left_lung_mask": left_mask,
             "masked_lung": masked_lung,
             "overlay_view": overlay_view,
             "thoracic_envelope": thoracic_bbox,
             "lung_area_ratio": round(lung_area_ratio, 4),
+            "right_lung_area_ratio": round(right_ratio, 4),
+            "left_lung_area_ratio": round(left_ratio, 4),
+            "lung_symmetry_index": symmetry_index,
             "validation_status": validation_status,
             "status_message": status_message,
             "is_valid_frontal": is_valid_frontal

@@ -173,12 +173,74 @@ export default function WorkstationPage() {
               </div>
             </div>
           </div>
+
+          {/* CTR Biometrics & ED STAT Triage Strip */}
+          {study && (
+            <div className="glass-panel rounded-xl p-4 shadow-xl">
+              <div className="flex items-center justify-between pb-2 border-b border-radDark-700 mb-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+                  Cardiothoracic Ratio (CTR) & ED STAT Triage
+                </h3>
+                <span
+                  className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
+                    study.ctr?.is_cardiomegaly
+                      ? "bg-red-950/60 text-red-400 border-red-800"
+                      : "bg-emerald-950/60 text-emerald-400 border-emerald-800"
+                  }`}
+                >
+                  CTR: {study.ctr ? `${study.ctr.ctr_percentage}% (${study.ctr.is_cardiomegaly ? "CARDIOMEGALY" : "NORMAL"})` : "--"}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
+                <div className="bg-radDark-900 p-2.5 rounded-lg border border-radDark-700">
+                  <p className="text-[10px] text-slate-400 uppercase">CTR Percentage</p>
+                  <p className="text-base font-bold text-slate-200 mt-0.5">
+                    {study.ctr ? `${study.ctr.ctr_percentage}%` : "--"}
+                  </p>
+                </div>
+                <div className="bg-radDark-900 p-2.5 rounded-lg border border-radDark-700">
+                  <p className="text-[10px] text-slate-400 uppercase">Heart Diameter</p>
+                  <p className="text-base font-bold text-slate-200 mt-0.5">
+                    {study.ctr ? `${study.ctr.cardiac_diameter_cm} cm` : "--"}
+                  </p>
+                </div>
+                <div className="bg-radDark-900 p-2.5 rounded-lg border border-radDark-700">
+                  <p className="text-[10px] text-slate-400 uppercase">Thorax Diameter</p>
+                  <p className="text-base font-bold text-slate-200 mt-0.5">
+                    {study.ctr ? `${study.ctr.thoracic_diameter_cm} cm` : "--"}
+                  </p>
+                </div>
+                <div className="bg-radDark-900 p-2.5 rounded-lg border border-radDark-700">
+                  <p className="text-[10px] text-slate-400 uppercase">Lung Symmetry</p>
+                  <p className="text-base font-bold text-cyan-400 mt-0.5">
+                    {study.pulmonary_extraction.lung_symmetry_index !== undefined
+                      ? `${(study.pulmonary_extraction.lung_symmetry_index * 100).toFixed(0)}%`
+                      : "--"}
+                  </p>
+                </div>
+                <div className="bg-radDark-900 p-2.5 rounded-lg border border-radDark-700">
+                  <p className="text-[10px] text-slate-400 uppercase">ED STAT Priority</p>
+                  <p
+                    className={`text-base font-bold mt-0.5 ${
+                      study.emergency_triage?.priority_tier === "STAT_CRITICAL"
+                        ? "text-red-500 animate-pulse"
+                        : study.emergency_triage?.priority_tier === "URGENT"
+                        ? "text-amber-400"
+                        : "text-emerald-400"
+                    }`}
+                  >
+                    {study.emergency_triage?.priority_tier?.replace("_", " ") || "ROUTINE"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Middle Column: 14-Disease Differentials & 5-Zone Localization (Col 7-9) */}
         <div className="xl:col-span-3 flex flex-col space-y-4">
           <DifferentialsMatrix
-            findings={study?.classification.all_findings}
+            findings={study?.classification.all_predictions || study?.classification.all_findings}
           />
           <ZoneDistribution explainability={study?.explainability} />
         </div>

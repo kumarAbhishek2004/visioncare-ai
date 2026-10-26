@@ -63,18 +63,53 @@ class GradCAMPlusPlusEngine:
     def _save_gradient(self, grad):
         self.gradients = grad
 
-    def generate_heatmap(
+    def generate_gradcam(
         self,
         input_tensor: torch.Tensor,
         class_idx: int,
         target_size: Tuple[int, int] = (1024, 1024)
     ) -> np.ndarray:
         """
-        Computes Grad-CAM++ continuous activation map resized to target_size.
-        Returns: Normalized float32 heatmap (0.0 to 1.0).
+        Computes standard Grad-CAM attribution map via global average pooled gradients:
+        alpha_k = (1/Z) * sum(grad_k)
+        L_GradCAM = ReLU(sum(alpha_k * A_k))
         """
         self.model.zero_grad()
+        output = self.model(input_tensor)
+        target_score = output[0, class_idx]
+        target_score.backward(retain_graph=True)
 
+        if self.gradients is None or self.activations is None:
+            return np.zeros(target_size, dtype=np.float32)
+
+        grads = self.gradients[0].detach()   # [C, H, W]
+        acts = self.activations[0].detach()  # [C, H, W]
+
+        # Standard Grad-CAM weights: global average of gradients across spatial dimensions
+        weights = grads.mean(dim=(1, 2), keepdim=True)
+        cam = (weights * acts).sum(dim=0)
+        cam = F.relu(cam)
+
+        cam_np = cam.cpu().numpy()
+        cam_min, cam_max = cam_np.min(), cam_np.max()
+        if cam_max > cam_min:
+            cam_np = (cam_np - cam_min) / (cam_max - cam_min)
+        else:
+            cam_np = np.zeros_like(cam_np)
+
+        heatmap_resized = cv2.resize(cam_np, target_size, interpolation=cv2.INTER_CUBIC)
+        return np.clip(heatmap_resized, 0.0, 1.0)
+
+    def generate_gradcam_plus_plus(
+        self,
+        input_tensor: torch.Tensor,
+        class_idx: int,
+        target_size: Tuple[int, int] = (1024, 1024)
+    ) -> np.ndarray:
+        """
+        Computes Grad-CAM++ continuous activation map with higher-order gradient weighting.
+        """
+        self.model.zero_grad()
         output = self.model(input_tensor)
         target_score = output[0, class_idx]
         target_score.backward(retain_graph=True)
@@ -100,15 +135,105 @@ class GradCAMPlusPlusEngine:
 
         cam_np = cam.cpu().numpy()
         cam_min, cam_max = cam_np.min(), cam_np.max()
-
         if cam_max > cam_min:
             cam_np = (cam_np - cam_min) / (cam_max - cam_min)
         else:
             cam_np = np.zeros_like(cam_np)
 
-        # Upsample to full diagnostic resolution (e.g. 1024x1024)
         heatmap_resized = cv2.resize(cam_np, target_size, interpolation=cv2.INTER_CUBIC)
         return np.clip(heatmap_resized, 0.0, 1.0)
+
+    def generate_integrated_gradients(
+        self,
+        input_tensor: torch.Tensor,
+        class_idx: int,
+        steps: int = 12,
+        target_size: Tuple[int, int] = (1024, 1024)
+    ) -> np.ndarray:
+        """
+        Computes Integrated Gradients (Sundararajan et al., ICML 2017) feature attribution.
+        Integrates path gradients from black baseline to input image.
+        """
+        baseline = torch.zeros_like(input_tensor)
+        diff = input_tensor - baseline
+        accumulated_grads = torch.zeros_like(input_tensor)
+
+        for step in range(1, steps + 1):
+            alpha = float(step) / float(steps)
+            interpolated = baseline + alpha * diff
+            interpolated.requires_grad_(True)
+            self.model.zero_grad()
+            out = self.model(interpolated)
+            target = out[0, class_idx]
+            target.backward(retain_graph=True)
+            if interpolated.grad is not None:
+                accumulated_grads += interpolated.grad.detach()
+
+        # Multiply by input difference: (x - x') * avg_grad
+        ig = (diff * (accumulated_grads / steps)).squeeze(0).abs().mean(dim=0).cpu().numpy()
+        ig_min, ig_max = ig.min(), ig.max()
+        if ig_max > ig_min:
+            ig = (ig - ig_min) / (ig_max - ig_min)
+        else:
+            ig = np.zeros_like(ig)
+
+        # Smooth slightly and resize to target resolution
+        ig_smooth = cv2.GaussianBlur(ig, (7, 7), 2.0)
+        heatmap_resized = cv2.resize(ig_smooth, target_size, interpolation=cv2.INTER_CUBIC)
+        return np.clip(heatmap_resized, 0.0, 1.0)
+
+    def generate_saliency(
+        self,
+        input_tensor: torch.Tensor,
+        class_idx: int,
+        target_size: Tuple[int, int] = (1024, 1024)
+    ) -> np.ndarray:
+        """
+        Computes Vanilla Gradient Saliency map (Simonyan et al.):
+        Takes absolute maximum gradient with respect to input pixels.
+        """
+        inp = input_tensor.clone().detach().requires_grad_(True)
+        self.model.zero_grad()
+        out = self.model(inp)
+        target = out[0, class_idx]
+        target.backward(retain_graph=True)
+
+        if inp.grad is None:
+            return np.zeros(target_size, dtype=np.float32)
+
+        saliency, _ = torch.max(inp.grad.detach().abs(), dim=1)
+        saliency_np = saliency.squeeze(0).cpu().numpy()
+        s_min, s_max = saliency_np.min(), saliency_np.max()
+        if s_max > s_min:
+            saliency_np = (saliency_np - s_min) / (s_max - s_min)
+        else:
+            saliency_np = np.zeros_like(saliency_np)
+
+        saliency_smooth = cv2.GaussianBlur(saliency_np, (5, 5), 1.5)
+        heatmap_resized = cv2.resize(saliency_smooth, target_size, interpolation=cv2.INTER_CUBIC)
+        return np.clip(heatmap_resized, 0.0, 1.0)
+
+    def generate_heatmap(
+        self,
+        input_tensor: torch.Tensor,
+        class_idx: int,
+        target_size: Tuple[int, int] = (1024, 1024),
+        method: str = "gradcam++"
+    ) -> np.ndarray:
+        """
+        Unified multi-technique explainability selector:
+        Supports 'gradcam++', 'gradcam', 'integrated_gradients', and 'saliency'.
+        """
+        m = method.lower().strip()
+        if m in ("gradcam", "grad_cam"):
+            return self.generate_gradcam(input_tensor, class_idx, target_size)
+        elif m in ("integrated_gradients", "ig"):
+            return self.generate_integrated_gradients(input_tensor, class_idx, target_size=target_size)
+        elif m in ("saliency", "vanilla_gradient"):
+            return self.generate_saliency(input_tensor, class_idx, target_size)
+        else:
+            # Default to Grad-CAM++
+            return self.generate_gradcam_plus_plus(input_tensor, class_idx, target_size)
 
     def extract_bounding_boxes(
         self,

@@ -9,7 +9,7 @@ interface ViewportSyncProps {
   isLoading: boolean;
 }
 
-type ViewMode = "original" | "enhanced" | "mask" | "cam";
+type ViewMode = "original" | "enhanced" | "bone" | "mask" | "caliper" | "cam";
 
 export const ViewportSync: React.FC<ViewportSyncProps> = ({ study, isLoading }) => {
   const [viewMode, setViewMode] = useState<ViewMode>("cam");
@@ -23,8 +23,12 @@ export const ViewportSync: React.FC<ViewportSyncProps> = ({ study, isLoading }) 
         return study.image_assets.original;
       case "enhanced":
         return study.image_assets.enhanced;
+      case "bone":
+        return study.image_assets.enhanced_bone || study.image_assets.enhanced;
       case "mask":
         return study.image_assets.overlay_mask;
+      case "caliper":
+        return study.image_assets.caliper_overlay || study.image_assets.original;
       case "cam":
         return study.image_assets.original;
     }
@@ -36,10 +40,14 @@ export const ViewportSync: React.FC<ViewportSyncProps> = ({ study, isLoading }) 
         return "ORIGINAL RADIOGRAPH (PA)";
       case "enhanced":
         return "CLAHE DIAGNOSTIC OPTIMIZED";
+      case "bone":
+        return "BONE & PLEURAL EDGE SHARPENING";
       case "mask":
         return "PULMONARY PARENCHYMA MASK";
+      case "caliper":
+        return "CARDIOTHORACIC RATIO (CTR) BIOMETRICS";
       case "cam":
-        return "GRAD-CAM++ HEATMAP ATTRIBUTION";
+        return `${(study?.explainability?.xai_method || "GRAD-CAM++").toUpperCase()} ATTRIBUTION`;
     }
   };
 
@@ -56,7 +64,7 @@ export const ViewportSync: React.FC<ViewportSyncProps> = ({ study, isLoading }) 
 
         {/* View Mode Buttons */}
         <div className="flex bg-radDark-900 p-0.5 rounded-lg border border-radDark-700 text-xs">
-          {(["original", "enhanced", "mask", "cam"] as ViewMode[]).map((mode) => (
+          {(["original", "enhanced", "bone", "mask", "caliper", "cam"] as ViewMode[]).map((mode) => (
             <button
               key={mode}
               onClick={() => setViewMode(mode)}
@@ -71,9 +79,13 @@ export const ViewportSync: React.FC<ViewportSyncProps> = ({ study, isLoading }) 
                 ? "Original"
                 : mode === "enhanced"
                 ? "CLAHE"
+                : mode === "bone"
+                ? "Bone/Edge"
                 : mode === "mask"
                 ? "Lung Field"
-                : "Grad-CAM++"}
+                : mode === "caliper"
+                ? "CTR Caliper"
+                : "XAI Attrib"}
             </button>
           ))}
         </div>

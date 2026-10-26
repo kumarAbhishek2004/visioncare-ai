@@ -131,17 +131,23 @@ class ClinicalPDFGenerator:
         clf = analysis_data.get("classification", {})
         reliability = clf.get("prediction_reliability", "MODERATE")
         safety_triage = clf.get("safety_triage", "ASSISTED_REVIEW_READY")
+        ctr = analysis_data.get("ctr", {})
+        ctr_pct = ctr.get("ctr_percentage", "--")
+        triage = analysis_data.get("emergency_triage", {})
+        priority = triage.get("priority_tier", "ROUTINE")
 
         badge_color = "#16a34a" if reliability == "HIGH" else ("#d97706" if reliability == "MODERATE" else "#dc2626")
+        prio_color = "#dc2626" if priority == "STAT_CRITICAL" else ("#d97706" if priority == "URGENT" else "#16a34a")
 
         triage_data = [
             [
-                Paragraph(f"<b>Image Quality:</b> {iqa_score}/100 ({iqa_tier})", self.styles["BodySmall"]),
+                Paragraph(f"<b>IQA Quality:</b> {iqa_score}/100 ({iqa_tier})", self.styles["BodySmall"]),
                 Paragraph(f"<b>Prediction Reliability:</b> <font color='{badge_color}'><b>{reliability}</b></font>", self.styles["BodySmall"]),
-                Paragraph(f"<b>Triage Status:</b> <b>{safety_triage}</b>", self.styles["BodySmall"])
+                Paragraph(f"<b>ED Triage:</b> <font color='{prio_color}'><b>{priority}</b></font>", self.styles["BodySmall"]),
+                Paragraph(f"<b>CTR Biometric:</b> <b>{ctr_pct}%</b>", self.styles["BodySmall"])
             ]
         ]
-        triage_table = Table(triage_data, colWidths=[180, 180, 180])
+        triage_table = Table(triage_data, colWidths=[135, 135, 135, 135])
         triage_table.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f8fafc")),
             ("PADDING", (0, 0), (-1, -1), 6),

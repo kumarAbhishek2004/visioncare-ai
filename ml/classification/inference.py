@@ -220,22 +220,42 @@ class DiseaseClassifier:
 
         with torch.no_grad():
             if use_tta:
-                tensor_flip = torch.flip(tensor, dims=[3])
-                logits_orig = self.model(tensor).squeeze(0)
-                logits_flip = self.model(tensor_flip).squeeze(0)
-                raw_logits = ((logits_orig + logits_flip) * 0.5).cpu()
+                # 3-pass test-time perturbation for uncertainty quantification:
+                # Pass 1: Original radiograph
+                # Pass 2: Horizontal flip
+                # Pass 3: Subtle contrast scaling
+                t1 = tensor
+                t2 = torch.flip(tensor, dims=[3])
+                t3 = torch.clamp(tensor * 1.05, -2.5, 2.5)
+
+                l1 = self.model(t1).squeeze(0).cpu()
+                l2 = self.model(t2).squeeze(0).cpu()
+                l3 = self.model(t3).squeeze(0).cpu()
+
+                raw_logits = (l1 + l2 + l3) / 3.0
+                all_logits_passes = [l1, l2, l3]
             else:
-                raw_logits = self.model(tensor).squeeze(0).cpu()
+                l1 = self.model(tensor).squeeze(0).cpu()
+                raw_logits = l1
+                all_logits_passes = [l1]
 
-        # 1. Apply Temperature Scaling calibration
-        scaled_logits = torch.zeros_like(raw_logits)
-        for i, disease in enumerate(DISEASE_CLASSES):
-            t = self.temperatures.get(disease, 1.0)
-            t = max(0.1, float(t))
-            scaled_logits[i] = raw_logits[i] / t
+        # 1. Apply Temperature Scaling calibration to all passes
+        scaled_passes_probs = []
+        for l_pass in all_logits_passes:
+            scaled_l = torch.zeros_like(l_pass)
+            for i, disease in enumerate(DISEASE_CLASSES):
+                t = self.temperatures.get(disease, 1.0)
+                t = max(0.1, float(t))
+                scaled_l[i] = l_pass[i] / t
+            scaled_passes_probs.append(torch.sigmoid(scaled_l).numpy())
 
-        # Independent calibrated probabilities (Sigmoid, NOT Softmax)
-        calibrated_probs = torch.sigmoid(scaled_logits).numpy()
+        # Average calibrated probabilities across passes
+        calibrated_probs = np.mean(scaled_passes_probs, axis=0)
+        # Epistemic uncertainty (std dev across perturbations)
+        if len(scaled_passes_probs) > 1:
+            epistemic_stds = np.std(scaled_passes_probs, axis=0)
+        else:
+            epistemic_stds = np.zeros_like(calibrated_probs)
 
         # 2. Thresholding and findings classification
         all_findings = []
@@ -246,6 +266,19 @@ class DiseaseClassifier:
             prob = float(calibrated_probs[i])
             thresh = self.thresholds.get(disease, 0.50)
             is_detected = prob >= thresh
+            std_err = float(epistemic_stds[i])
+
+            # 95% Confidence Interval (bounded in [0, 1])
+            ci_low = round(max(0.0, prob - 1.96 * max(std_err, 0.015)), 4)
+            ci_high = round(min(1.0, prob + 1.96 * max(std_err, 0.015)), 4)
+            margin = round(prob - thresh, 4)
+
+            if ci_low >= thresh:
+                stability = "ROBUST"
+            elif ci_high < thresh:
+                stability = "CLEAR_NEGATIVE"
+            else:
+                stability = "BORDERLINE"
 
             finding_info = {
                 "disease": disease,
@@ -253,7 +286,12 @@ class DiseaseClassifier:
                 "probability_pct": round(prob * 100.0, 1),
                 "threshold": round(thresh, 4),
                 "is_detected": is_detected,
-                "confidence_tier": "HIGH" if prob >= 0.70 else ("MODERATE" if prob >= 0.40 else "LOW")
+                "confidence_tier": "HIGH" if prob >= 0.70 else ("MODERATE" if prob >= 0.40 else "LOW"),
+                "ci_lower": ci_low,
+                "ci_upper": ci_high,
+                "epistemic_uncertainty": round(std_err, 4),
+                "decision_margin": margin,
+                "boundary_stability": stability
             }
             all_findings.append(finding_info)
 

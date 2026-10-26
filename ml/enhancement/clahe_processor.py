@@ -25,6 +25,8 @@ class ImageOptimizer:
         "LUNG": {"window_center": 130, "window_width": 180},
         "MEDIASTINUM": {"window_center": 155, "window_width": 220},
         "BONE": {"window_center": 185, "window_width": 140},
+        "SOFT_TISSUE": {"window_center": 120, "window_width": 200},
+        "PNEUMOTHORAX_EDGE": {"window_center": 95, "window_width": 140},
         "DEFAULT": {"window_center": 128, "window_width": 255}
     }
 
@@ -52,6 +54,31 @@ class ImageOptimizer:
         """Edge-preserving smoothing to suppress high-frequency acquisition sensor noise."""
         return cv2.bilateralFilter(gray, d, sigma_color, sigma_space)
 
+    def apply_unsharp_mask(
+        self, gray: np.ndarray, kernel_size: Tuple[int, int] = (5, 5), sigma: float = 1.0, amount: float = 1.25, threshold: int = 0
+    ) -> np.ndarray:
+        """
+        High-frequency unsharp mask to accentuate fine pleural lines and interstitial markings.
+        Amount controls sharpening strength.
+        """
+        blurred = cv2.GaussianBlur(gray, kernel_size, sigma)
+        sharpened = float(amount + 1) * gray.astype(np.float32) - float(amount) * blurred.astype(np.float32)
+        sharpened = np.clip(sharpened, 0, 255).astype(np.uint8)
+        if threshold > 0:
+            low_contrast_mask = np.abs(gray.astype(np.int16) - blurred.astype(np.int16)) < threshold
+            np.copyto(sharpened, gray, where=low_contrast_mask)
+        return sharpened
+
+    def apply_gamma(self, gray: np.ndarray, gamma: float = 1.2) -> np.ndarray:
+        """Applies non-linear gamma contrast compression or expansion."""
+        inv_gamma = 1.0 / max(0.1, gamma)
+        table = np.array([((i / 255.0) ** inv_gamma) * 255 for i in range(256)]).astype("uint8")
+        return cv2.LUT(gray, table)
+
+    def apply_inversion(self, gray: np.ndarray) -> np.ndarray:
+        """Inverts radiograph polarity (White-on-black vs Black-on-white) standard in PACS."""
+        return cv2.bitwise_not(gray)
+
     def apply_window_level(
         self, gray: np.ndarray, window_center: int, window_width: int
     ) -> np.ndarray:
@@ -74,13 +101,17 @@ class ImageOptimizer:
         self,
         image: Union[np.ndarray, Image.Image],
         preset: str = "DEFAULT",
-        enable_bilateral: bool = True
+        enable_bilateral: bool = True,
+        enable_unsharp: bool = False,
+        invert: bool = False
     ) -> Dict[str, Any]:
         """
         Runs complete non-generative optimization pipeline:
         1. Bilateral edge-preserving noise filter (optional)
         2. Window/Level preset transformation
         3. Adaptive CLAHE contrast balancing
+        4. High-frequency unsharp mask (optional for bone/pleural line)
+        5. Polarity inversion (optional)
         """
         gray = self._ensure_uint8_grayscale(image)
 
@@ -94,10 +125,19 @@ class ImageOptimizer:
         # 3. CLAHE
         enhanced = self.apply_clahe(windowed)
 
+        # 4. Optional Unsharp Sharpening
+        if enable_unsharp or preset.upper() in ("BONE", "PNEUMOTHORAX_EDGE"):
+            enhanced = self.apply_unsharp_mask(enhanced, amount=1.2)
+
+        # 5. Polarity Inversion
+        if invert:
+            enhanced = self.apply_inversion(enhanced)
+
         return {
             "original_gray": gray,
             "enhanced_image": enhanced,
             "applied_preset": preset.upper(),
             "window_parameters": cfg,
-            "clahe_clip_limit": self.clip_limit
+            "clahe_clip_limit": self.clip_limit,
+            "is_inverted": invert
         }

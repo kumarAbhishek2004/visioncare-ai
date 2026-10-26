@@ -29,8 +29,11 @@ from ml.explainability.gradcam_engine import GradCAMPlusPlusEngine
 from ml.explainability.zone_mapper import AnatomicalZoneMapper
 from ml.explainability.decision_trace import DecisionTraceLogger
 from ml.llm.synthesizer import ClinicalReportSynthesizer
+from ml.dicom.dicom_parser import DICOMParser
+from ml.biometrics.ctr_analyzer import CardiothoracicRatioAnalyzer
+from ml.triage.emergency_triage import EmergencyTriageEngine
 from backend.app.services.pdf_service import ClinicalPDFGenerator
-from backend.app.schemas.study import StudyAnalysisResponse
+from backend.app.schemas.study import StudyAnalysisResponse, BatchTriageResponse, BatchTriageItem
 
 router = APIRouter()
 
@@ -42,6 +45,7 @@ classifier = DiseaseClassifier()
 cam_engine = GradCAMPlusPlusEngine(classifier.model)
 zone_mapper = AnatomicalZoneMapper()
 synthesizer = ClinicalReportSynthesizer()
+ctr_analyzer = CardiothoracicRatioAnalyzer()
 pdf_generator = ClinicalPDFGenerator()
 
 # In-memory study cache for PDF generation
@@ -72,14 +76,37 @@ def analyze_study(
     gender: Optional[str] = Form("M"),
     view_position: Optional[str] = Form("PA"),
     pixel_spacing_x: Optional[float] = Form(0.143),
-    pixel_spacing_y: Optional[float] = Form(0.143)
+    pixel_spacing_y: Optional[float] = Form(0.143),
+    xai_method: Optional[str] = Form("gradcam++"),
+    enhancement_preset: Optional[str] = Form("LUNG")
 ):
     """
     Unified end-to-end clinical analysis:
-    Runs IQA -> CLAHE -> Pulmonary Extraction -> DenseNet Inference -> Grad-CAM++ -> Zone Mapping -> Gemini Report.
+    Runs IQA -> CLAHE/Edge Optimization -> Pulmonary Extraction -> DenseNet Inference with Uncertainty Quantification -> Multi-method Attribution (Grad-CAM++, Grad-CAM, Integrated Gradients) -> Zone Mapping -> Gemini Report.
     Declared as synchronous def so FastAPI dispatches the heavy CPU/ML workload to a threadpool.
     """
-    # 1. Read & decode uploaded image
+    # Normalize direct function call parameter defaults (when invoked outside FastAPI router)
+    if hasattr(patient_id, "default"):
+        patient_id = str(patient_id.default)
+    if hasattr(age, "default"):
+        age = int(age.default) if age.default is not None else None
+    if hasattr(gender, "default"):
+        gender = str(gender.default)
+    if hasattr(view_position, "default"):
+        view_position = str(view_position.default)
+    if hasattr(pixel_spacing_x, "default"):
+        pixel_spacing_x = float(pixel_spacing_x.default) if pixel_spacing_x.default is not None else None
+    if hasattr(pixel_spacing_y, "default"):
+        pixel_spacing_y = float(pixel_spacing_y.default) if pixel_spacing_y.default is not None else None
+    if hasattr(xai_method, "default"):
+        xai_method = str(xai_method.default)
+    if hasattr(enhancement_preset, "default"):
+        enhancement_preset = str(enhancement_preset.default)
+
+    xai_method = xai_method or "gradcam++"
+    enhancement_preset = enhancement_preset or "LUNG"
+
+    # 1. Read & decode uploaded image (support both standard formats and native DICOM)
     if hasattr(file, "file") and hasattr(file.file, "read"):
         try:
             file.file.seek(0)
@@ -89,11 +116,29 @@ def analyze_study(
     else:
         contents = file.read()
 
-    nparr = np.frombuffer(contents, np.uint8)
-    image_gray = cv2.imdecode(nparr, cv2.IMREAD_GRAYSCALE)
+    fname = (file.filename or "").lower()
+    is_dicom = DICOMParser.is_dicom_bytes(contents) or fname.endswith(".dcm")
+
+    if is_dicom:
+        dcm_data = DICOMParser.parse(contents)
+        image_gray = dcm_data["image"]
+        # Use DICOM metadata if available
+        if patient_id in ("PT-001", "ANONYMOUS", None) and dcm_data["patient_id"] != "ANONYMOUS":
+            patient_id = dcm_data["patient_id"]
+        if dcm_data["age"] is not None:
+            age = dcm_data["age"]
+        if dcm_data["gender"] is not None:
+            gender = dcm_data["gender"]
+        if dcm_data["view_position"] is not None:
+            view_position = dcm_data["view_position"]
+        if dcm_data["pixel_spacing"] is not None:
+            pixel_spacing_x, pixel_spacing_y = dcm_data["pixel_spacing"]
+    else:
+        nparr = np.frombuffer(contents, np.uint8)
+        image_gray = cv2.imdecode(nparr, cv2.IMREAD_GRAYSCALE)
 
     if image_gray is None:
-        raise HTTPException(status_code=400, detail="Uploaded file is not a valid or readable image.")
+        raise HTTPException(status_code=400, detail="Uploaded file is not a valid or readable radiograph (DICOM/PNG/JPEG).")
 
     study_id = f"STD-{uuid.uuid4().hex[:8].upper()}"
     now_iso = datetime.now(timezone.utc).isoformat()
@@ -102,15 +147,18 @@ def analyze_study(
         "age": age,
         "gender": gender,
         "view_position": view_position,
-        "pixel_spacing": pixel_spacing
+        "pixel_spacing": pixel_spacing,
+        "is_dicom": is_dicom
     }
 
     # 2. Module 1: Image Quality Assessment (IQA)
     iqa_res = iqa_analyzer.evaluate(image_gray)
 
     # 3. Module 2: Diagnostic Optimization
-    opt_res = optimizer.optimize(image_gray, preset="LUNG")
+    opt_res = optimizer.optimize(image_gray, preset=enhancement_preset)
     enhanced_img = opt_res["enhanced_image"]
+    opt_bone = optimizer.optimize(image_gray, preset="BONE", enable_unsharp=True)
+    opt_inverted = optimizer.optimize(image_gray, preset=enhancement_preset, invert=True)
 
     # 4. Module 3: Pulmonary Region Extraction
     seg_res = extractor.extract(enhanced_img)
@@ -118,7 +166,7 @@ def analyze_study(
     # 5. Module 4: Multi-Label Disease Classification & Calibration
     clf_res = classifier.predict(image_gray)
 
-    # 6. Module 5A: Grad-CAM++ Feature Attribution
+    # 6. Module 5A: Multi-Method Explainability Attribution
     # Target top detected pathology, or default to Pneumonia / Atelectasis
     primary = clf_res.get("primary_findings", [])
     target_disease = primary[0]["disease"] if primary else "Pneumonia"
@@ -126,18 +174,27 @@ def analyze_study(
 
     input_tensor = classifier.preprocess(image_gray)
     h, w = image_gray.shape[:2]
-    heatmap = cam_engine.generate_heatmap(input_tensor, target_idx, target_size=(w, h))
+    heatmap = cam_engine.generate_heatmap(input_tensor, target_idx, target_size=(w, h), method=xai_method)
     boxes = cam_engine.extract_bounding_boxes(heatmap, threshold_percentile=75.0, pixel_spacing=pixel_spacing)
     heatmap_overlay = cam_engine.create_overlay(image_gray, heatmap, alpha=0.50)
 
     # 7. Module 5B: 5-Zone Anatomical Mapper
     zone_res = zone_mapper.map_heatmap_to_zones(heatmap, seg_res["lung_mask"])
 
-    # 8. Module 5C: AI Decision Trace Logger
+    # 8. Module 8: Quantitative Cardiothoracic Ratio (CTR) Biometrics
+    ctr_res = ctr_analyzer.analyze(image_gray, seg_res["lung_mask"], pixel_spacing=pixel_spacing)
+
+    # 9. Module 9: Emergency Department (ED) STAT Triage Prioritization
+    triage_res = EmergencyTriageEngine.evaluate_triage(clf_res, iqa_res, ctr_res)
+
+    # 10. Module 5C: AI Decision Trace Logger
     xai_summary = {
+        "xai_method": xai_method,
         "primary_zone_name": zone_res["primary_zone_name"],
         "primary_zone_percentage": zone_res["primary_zone_percentage"],
-        "bounding_boxes": boxes
+        "bounding_boxes": boxes,
+        "ctr_percentage": ctr_res["ctr_percentage"],
+        "triage_priority": triage_res["priority_tier"]
     }
     trace = DecisionTraceLogger.build_trace(
         iqa_result=iqa_res,
@@ -148,7 +205,7 @@ def analyze_study(
         study_id=study_id
     )
 
-    # 9. Module 6: Structured Clinical Report Synthesizer
+    # 11. Module 6: Structured Clinical Report Synthesizer
     clinical_report = synthesizer.synthesize(
         primary_findings=clf_res["primary_findings"],
         associated_findings=clf_res["associated_findings"],
@@ -158,14 +215,20 @@ def analyze_study(
         demographics=demographics
     )
 
-    # 10. Encode Image Assets for Single-Roundtrip UI Rendering
+    # 12. Encode Image Assets for Single-Roundtrip UI Rendering
     image_assets = {
         "original": _encode_to_base64_data_uri(image_gray),
         "enhanced": _encode_to_base64_data_uri(enhanced_img),
+        "enhanced_bone": _encode_to_base64_data_uri(opt_bone["enhanced_image"]),
+        "enhanced_inverted": _encode_to_base64_data_uri(opt_inverted["enhanced_image"]),
         "lung_mask": _encode_to_base64_data_uri(seg_res["lung_mask"]),
         "overlay_mask": _encode_to_base64_data_uri(seg_res["overlay_view"]),
-        "heatmap_overlay": _encode_to_base64_data_uri(heatmap_overlay)
+        "heatmap_overlay": _encode_to_base64_data_uri(heatmap_overlay),
+        "caliper_overlay": _encode_to_base64_data_uri(ctr_res["caliper_overlay"])
     }
+
+    # Clean non-serializable elements from ctr_res before returning
+    ctr_clean = {k: v for k, v in ctr_res.items() if k != "caliper_overlay"}
 
     # Cache study in memory for instantaneous PDF generation
     STUDY_CACHE[study_id] = {
@@ -178,6 +241,8 @@ def analyze_study(
             "pulmonary_extraction": seg_res,
             "classification": clf_res,
             "explainability": zone_res,
+            "ctr": ctr_clean,
+            "emergency_triage": triage_res,
             "clinical_report": clinical_report,
             "decision_trace": trace
         },
@@ -185,7 +250,8 @@ def analyze_study(
             "original": image_gray,
             "enhanced": enhanced_img,
             "overlay_mask": seg_res["overlay_view"],
-            "heatmap_overlay": heatmap_overlay
+            "heatmap_overlay": heatmap_overlay,
+            "caliper_overlay": ctr_res["caliper_overlay"]
         }
     }
 
@@ -197,6 +263,9 @@ def analyze_study(
         iqa=iqa_res,
         pulmonary_extraction={
             "lung_area_ratio": seg_res["lung_area_ratio"],
+            "right_lung_area_ratio": seg_res.get("right_lung_area_ratio", 0.0),
+            "left_lung_area_ratio": seg_res.get("left_lung_area_ratio", 0.0),
+            "lung_symmetry_index": seg_res.get("lung_symmetry_index", 1.0),
             "thoracic_envelope": seg_res["thoracic_envelope"],
             "validation_status": seg_res["validation_status"],
             "status_message": seg_res["status_message"],
@@ -204,6 +273,8 @@ def analyze_study(
         },
         classification=clf_res,
         explainability={
+            "xai_method": xai_method,
+            "available_methods": ["gradcam++", "gradcam", "integrated_gradients", "saliency"],
             "target_pathology": target_disease,
             "primary_zone": zone_res["primary_zone"],
             "primary_zone_name": zone_res["primary_zone_name"],
@@ -214,9 +285,77 @@ def analyze_study(
             "clinical_summary": zone_res["clinical_summary"],
             "bounding_boxes": boxes
         },
+        ctr=ctr_clean,
+        emergency_triage=triage_res,
         clinical_report=clinical_report,
         decision_trace=trace,
         image_assets=image_assets
+    )
+
+
+@router.post("/batch", response_model=BatchTriageResponse)
+def analyze_batch_triage(
+    files: list[UploadFile] = File(...),
+):
+    """
+    Hospital Emergency Department (ED) Batch Ingestion & STAT Triage Prioritization.
+    Ingests multiple radiographs simultaneously, runs full pipeline inference,
+    and returns a sorted clinical worklist ordered by urgency score.
+    """
+    items: list[BatchTriageItem] = []
+    stat_cnt, urgent_cnt, routine_cnt = 0, 0, 0
+
+    for idx, f in enumerate(files):
+        p_id = f"PT-ED-{100 + idx}"
+        try:
+            res = analyze_study(file=f, patient_id=p_id)
+            tri = res.emergency_triage or {}
+            tier = tri.get("priority_tier", "ROUTINE")
+            if tier == "STAT_CRITICAL":
+                stat_cnt += 1
+            elif tier == "URGENT":
+                urgent_cnt += 1
+            else:
+                routine_cnt += 1
+
+            top_find = "No Acute Findings"
+            if res.classification.get("primary_findings"):
+                top_find = res.classification["primary_findings"][0]["disease"]
+
+            items.append(BatchTriageItem(
+                study_id=res.study_id,
+                patient_id=res.patient_id or p_id,
+                priority_tier=tier,
+                urgency_score=tri.get("urgency_score", 10.0),
+                sla_turnaround=tri.get("sla_turnaround", "< 4 hours"),
+                top_finding=top_find,
+                reliability=res.classification.get("prediction_reliability", "MODERATE"),
+                ctr_percentage=res.ctr.get("ctr_percentage") if res.ctr else None,
+                triage_summary=tri.get("triage_summary", "Study processed.")
+            ))
+        except Exception as e:
+            items.append(BatchTriageItem(
+                study_id=f"STD-ERR-{idx}",
+                patient_id=p_id,
+                priority_tier="ROUTINE",
+                urgency_score=0.0,
+                sla_turnaround="--",
+                top_finding="Error processing",
+                reliability="LOW",
+                ctr_percentage=None,
+                triage_summary=f"Analysis failed: {str(e)}"
+            ))
+            routine_cnt += 1
+
+    # Sort worklist in descending order of urgency score
+    items.sort(key=lambda x: x.urgency_score, reverse=True)
+
+    return BatchTriageResponse(
+        total_studies=len(items),
+        stat_critical_count=stat_cnt,
+        urgent_count=urgent_cnt,
+        routine_count=routine_cnt,
+        worklist=items
     )
 
 
