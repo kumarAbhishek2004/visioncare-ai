@@ -10,20 +10,32 @@ tests/
 # Large Model Weights & Checkpoints (Store on Hugging Face / S3 / Git LFS)
 *.pth
 *.pt
+*.ckpt
+*.safetensors
 *.bin
 *.onnx
 *.h5
 *.weights
+*.pkl
+*.pickle
 pretrained/*.pth
+pretrained/*.pt
 
-# Allow JSON metadata and configs in pretrained/
+# Allow JSON calibration parameters and validation metrics in pretrained/
 !pretrained/*.json
 
 # Medical Imaging Data & Raw Archives
-datasets/NIH/
+datasets/
+data/
 *.dcm
+*.dicom
 *.tar.gz
+*.tar
+*.gz
 *.zip
+*.7z
+*.rar
+*.csv
 
 # Python Bytecode & Cache
 __pycache__/
@@ -33,34 +45,50 @@ __pycache__/
 .pytest_cache/
 .coverage
 htmlcov/
+.mypy_cache/
+.ruff_cache/
 
-# Environments & Dependencies
+# Environments & Sensitive Credentials
 .env
 .env.local
 .env.*.local
+.env.development
+.env.test
+.env.production
 venv/
 .venv/
 env/
+ENV/
 
 # Frontend Build & Node Modules
 frontend/node_modules/
+node_modules/
 frontend/.next/
+.next/
 frontend/out/
+out/
 frontend/build/
+build/
+dist/
 .turbo/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
 # Operating System & IDE Files
 .DS_Store
 Thumbs.db
+ehthumbs.db
 desktop.ini
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
-# Temporary & Log Files
+# Temporary & Output Files
 *.log
-reports/*.pdf
+*.tmp
+*.pdf
+!docs/*.pdf
