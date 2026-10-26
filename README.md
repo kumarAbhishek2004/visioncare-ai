@@ -1,82 +1,80 @@
-# 🫁 VisionCare AI: Explainable Radiology Assistant
+# 🫁 VisionCare AI (Work in Progress)
 
-An AI-assisted radiology workstation and clinical decision support system for frontal chest radiographs.
+An Explainable AI-assisted radiology assistant and clinical decision support system for frontal chest radiographs.
 
----
-
-## 🌟 System Architecture
-
-```
-Frontal Chest X-ray
-        │
-        ▼
-[ Module 1: Image Quality Assessment (IQA) ]
-- Laplacian Sharpness, Exposure Clipping, Michelson Contrast
-        │
-        ▼
-[ Module 2: Diagnostic Image Optimization ]
-- Non-generative CLAHE (Clip Limit 2.0) & Radiologist Window/Level Presets (Lung, Bone, Mediastinum)
-        │
-        ├──────────────────────────────────────────┐
-        ▼                                          ▼
-[ Module 3: Pulmonary Region Extraction ]    [ Module 4: Multi-Label Disease Classifier ]
-- MONAI Pretrained BasicUNet                 - DenseNet-121 (Trained on 25k Patient-Isolated NIH-14)
-- Lung Mask, Overlay & Thoracic Envelope     - 14 Pathologies with Temperature Scaling Calibration
-- Sanity Check: Area < 8% Flag for Review    - Youden's J-Statistic Optimal Operating Thresholds
-        │                                          │
-        └────────────────────┬─────────────────────┘
-                             │
-                             ▼
-[ Module 5: Explainability & Clinical Decision Support (CDS) ]
-- Grad-CAM++ Feature Attribution
-- Otsu Bounding Box Extraction & 5-Zone Anatomical Localization
-- Clinical Safety Gate: Low confidence triggers mandatory manual radiologist review
-        │
-        ▼
-[ Module 6: Structured Clinical Assistant ]
-- Gemini 2.5 Flash Structured JSON Reporting (`findings`, `impression`, `recommendation`, `disclaimer`)
-        │
-        ▼
-[ Module 7: Professional Radiology Workstation & PDF ]
-- Synced Dual Viewports, Independent Calibrated Probabilities, and Audit Trail (AI Decision Trace)
-```
+> **Current Status:** Core ML engine, preprocessing modules, and cloud training pipelines are implemented and verified. Full-stack API and workstation interface are in active development.
 
 ---
 
-## 🚀 Repository Structure
+## 📌 Implementation Progress
+
+- [x] **System Architecture & Clinical Design**
+  - Clinical decision support (CDS) workflow defined.
+  - 14-disease multi-label classification structure using patient-isolated stratification.
+- [x] **Phase 1: Kaggle Cloud Training Pipeline**
+  - Standalone Jupyter Notebook: [`kaggle/visioncare_training.ipynb`](kaggle/visioncare_training.ipynb).
+  - Multi-label transfer learning (DenseNet121) on 25k stratified NIH ChestX-ray14 subset.
+  - Confidence calibration via Post-Hoc Temperature Scaling (minimizing ECE).
+  - Optimal operational decision thresholds via Youden's J-statistic.
+  - Localization benchmarking against 1,600 NIH radiologist bounding boxes (`BBox_List_2017.csv`).
+- [x] **Phase 2: Local Core AI Engine**
+  - **Module 1 (IQA):** `ml/quality/iqa_analyzer.py` — OpenCV-based Laplacian sharpness, exposure clipping, and Michelson contrast scoring.
+  - **Module 2 (Image Optimization):** `ml/enhancement/clahe_processor.py` — Non-generative CLAHE and Window/Level presets (`LUNG`, `MEDIASTINUM`, `BONE`).
+  - **Module 3 (Pulmonary Extraction):** `ml/segmentation/monai_unet.py` — Pulmonary parenchyma mask, thoracic bounding envelope, and frontal scan validation.
+  - **Module 4 (Classification & Safety):** `ml/classification/inference.py` — DenseNet-121 inference, independent calibrated probabilities, and Clinical Safety Triage gating.
+- [ ] **Phase 3: Explainability Engine & LLM Synthesizer** *(In Progress)*
+  - Grad-CAM++ feature attribution overlay ($1024 \times 1024$).
+  - 5-zone anatomical localization mapping (RUZ, RMZ, RLZ, LUZ, LLZ).
+  - Gemini 2.5 Flash structured clinical reporting and AI decision trace.
+- [ ] **Phase 4: Unified Backend API** *(Upcoming)*
+  - FastAPI orchestration endpoint (`POST /api/v1/studies/analyze`).
+  - ReportLab clinical PDF export service.
+- [ ] **Phase 5: Radiology Workstation Frontend** *(Upcoming)*
+  - Next.js 14, Tailwind CSS, and shadcn/ui clinical workstation.
+  - Synchronized dual-viewports with interactive heatmap opacity sliders.
+
+---
+
+## 📂 Current Repository Layout
 
 ```
-visioncare-ai/
+x_ray/
 ├── ml/
-│   ├── quality/             # Module 1: OpenCV IQA Analyzer
+│   ├── quality/             # Module 1: Image Quality Assessment (IQA)
 │   ├── enhancement/         # Module 2: CLAHE & Window/Level Presets
-│   ├── segmentation/        # Module 3: Pretrained BasicUNet Pulmonary Extractor
-│   ├── classification/      # Module 4: DenseNet-121 Multi-Label Inference & Calibration
-│   ├── explainability/      # Module 5: Grad-CAM++ & 5-Zone Anatomical Mapper
-│   └── llm/                 # Module 6: Gemini 2.5 Flash Structured Reporting
-├── backend/                 # FastAPI Production Service (Unified /analyze endpoint)
-├── frontend/                # Next.js 14 + Tailwind + shadcn/ui Radiology Workstation
-├── kaggle/                  # Standalone Jupyter Notebook for Cloud GPU Training
-├── pretrained/              # Learned Calibration Parameters & Thresholds
+│   ├── segmentation/        # Module 3: Pulmonary Region Extractor
+│   └── classification/      # Module 4: DenseNet-121 Inference & Calibration
+├── kaggle/
+│   ├── visioncare_training.ipynb  # Notebook for Kaggle GPU training
+│   └── README.md                  # Kaggle execution instructions
+├── pretrained/              # Learned thresholds & temperature parameters
+├── backend/                 # FastAPI service scaffolding
+├── frontend/                # Workstation UI scaffolding
 └── requirements.txt
 ```
 
 ---
 
-## 🛠️ Quickstart
+## 🛠️ Testing the Current ML Engine
 
-### 1. Install Dependencies
-```bash
-pip install -r requirements.txt
-```
+You can verify the currently implemented modules locally:
 
-### 2. Verify Core Engine
 ```bash
-python -c "from ml.quality.iqa_analyzer import ImageQualityAnalyzer; print('Engine Ready!')"
+# Verify Module 1 (IQA)
+python -c "from ml.quality.iqa_analyzer import ImageQualityAnalyzer; print('Module 1 (IQA): Ready')"
+
+# Verify Module 2 (Enhancement)
+python -c "from ml.enhancement.clahe_processor import ImageOptimizer; print('Module 2 (Optimization): Ready')"
+
+# Verify Module 3 (Pulmonary Extractor)
+python -c "from ml.segmentation.monai_unet import PulmonaryRegionExtractor; print('Module 3 (Segmentation): Ready')"
+
+# Verify Module 4 (Classification Engine)
+python -c "from ml.classification.inference import DiseaseClassifier; print('Module 4 (Classifier): Ready')"
 ```
 
 ---
 
-## 📄 License & Disclaimer
+## 📄 Note & Disclaimer
 
-**VisionCare AI** is an investigational decision-support research platform. It is not an FDA-cleared diagnostic device and is intended for assistive clinical research and educational review only.
+This is an investigational decision-support research project in active development. It is not an FDA-cleared medical device and is intended solely for research and educational purposes.
