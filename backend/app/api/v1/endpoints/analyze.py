@@ -68,6 +68,23 @@ def _encode_to_base64_data_uri(img_arr: np.ndarray) -> str:
     return f"data:image/png;base64,{b64_str}"
 
 
+def _sanitize_numpy(obj: Any) -> Any:
+    """Recursively converts numpy integers, floats, booleans, and arrays to native Python primitives for Pydantic v2."""
+    if isinstance(obj, dict):
+        return {k: _sanitize_numpy(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [_sanitize_numpy(x) for x in obj]
+    elif isinstance(obj, (np.integer,)):
+        return int(obj)
+    elif isinstance(obj, (np.floating,)):
+        return float(obj)
+    elif isinstance(obj, (np.bool_,)):
+        return bool(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    return obj
+
+
 @router.post("/analyze", response_model=StudyAnalysisResponse)
 def analyze_study(
     file: UploadFile = File(...),
@@ -153,6 +170,14 @@ def analyze_study(
 
     # 2. Module 1: Image Quality Assessment (IQA)
     iqa_res = iqa_analyzer.evaluate(image_gray)
+    blur_m = iqa_res.get("metrics", {}).get("blur", {})
+    contrast_m = iqa_res.get("metrics", {}).get("contrast", {})
+    exposure_m = iqa_res.get("metrics", {}).get("exposure", {})
+    iqa_res["laplacian_variance"] = float(blur_m.get("laplacian_variance", 0.0))
+    iqa_res["michelson_contrast"] = float(contrast_m.get("michelson_contrast", 0.0))
+    iqa_res["under_exposed_pct"] = float(exposure_m.get("under_exposed_pct", 0.0))
+    iqa_res["over_exposed_pct"] = float(exposure_m.get("over_exposed_pct", 0.0))
+    iqa_res["dynamic_range"] = int(image_gray.max() - image_gray.min()) if image_gray is not None else 255
 
     # 3. Module 2: Diagnostic Optimization
     opt_res = optimizer.optimize(image_gray, preset=enhancement_preset)
@@ -230,19 +255,38 @@ def analyze_study(
     # Clean non-serializable elements from ctr_res before returning
     ctr_clean = {k: v for k, v in ctr_res.items() if k != "caliper_overlay"}
 
+    # Sanitize all outputs so numpy types (np.int64, np.float32) never reach Pydantic serializers
+    ctr_clean = _sanitize_numpy(ctr_clean)
+    iqa_clean = _sanitize_numpy(iqa_res)
+    clf_clean = _sanitize_numpy(clf_res)
+    zone_clean = _sanitize_numpy(zone_res)
+    boxes_clean = _sanitize_numpy(boxes)
+    triage_clean = _sanitize_numpy(triage_res)
+    demographics_clean = _sanitize_numpy(demographics)
+    pulmonary_clean = _sanitize_numpy({
+        "lung_area_ratio": seg_res["lung_area_ratio"],
+        "right_lung_area_ratio": seg_res.get("right_lung_area_ratio", 0.0),
+        "left_lung_area_ratio": seg_res.get("left_lung_area_ratio", 0.0),
+        "lung_symmetry_index": seg_res.get("lung_symmetry_index", 1.0),
+        "thoracic_envelope": seg_res["thoracic_envelope"],
+        "validation_status": seg_res["validation_status"],
+        "status_message": seg_res["status_message"],
+        "is_valid_frontal": seg_res["is_valid_frontal"]
+    })
+
     # Cache study in memory for instantaneous PDF generation
     STUDY_CACHE[study_id] = {
         "analysis_data": {
             "study_id": study_id,
             "timestamp": now_iso,
             "patient_id": patient_id,
-            "demographics": demographics,
-            "iqa": iqa_res,
-            "pulmonary_extraction": seg_res,
-            "classification": clf_res,
-            "explainability": zone_res,
+            "demographics": demographics_clean,
+            "iqa": iqa_clean,
+            "pulmonary_extraction": pulmonary_clean,
+            "classification": clf_clean,
+            "explainability": zone_clean,
             "ctr": ctr_clean,
-            "emergency_triage": triage_res,
+            "emergency_triage": triage_clean,
             "clinical_report": clinical_report,
             "decision_trace": trace
         },
@@ -259,34 +303,25 @@ def analyze_study(
         study_id=study_id,
         timestamp=now_iso,
         patient_id=patient_id,
-        demographics=demographics,
-        iqa=iqa_res,
-        pulmonary_extraction={
-            "lung_area_ratio": seg_res["lung_area_ratio"],
-            "right_lung_area_ratio": seg_res.get("right_lung_area_ratio", 0.0),
-            "left_lung_area_ratio": seg_res.get("left_lung_area_ratio", 0.0),
-            "lung_symmetry_index": seg_res.get("lung_symmetry_index", 1.0),
-            "thoracic_envelope": seg_res["thoracic_envelope"],
-            "validation_status": seg_res["validation_status"],
-            "status_message": seg_res["status_message"],
-            "is_valid_frontal": seg_res["is_valid_frontal"]
-        },
-        classification=clf_res,
+        demographics=demographics_clean,
+        iqa=iqa_clean,
+        pulmonary_extraction=pulmonary_clean,
+        classification=clf_clean,
         explainability={
             "xai_method": xai_method,
             "available_methods": ["gradcam++", "gradcam", "integrated_gradients", "saliency"],
             "target_pathology": target_disease,
-            "primary_zone": zone_res["primary_zone"],
-            "primary_zone_name": zone_res["primary_zone_name"],
-            "primary_zone_percentage": zone_res["primary_zone_percentage"],
-            "secondary_zone": zone_res["secondary_zone"],
-            "secondary_zone_percentage": zone_res["secondary_zone_percentage"],
-            "zone_breakdown_pct": zone_res["zone_breakdown_pct"],
-            "clinical_summary": zone_res["clinical_summary"],
-            "bounding_boxes": boxes
+            "primary_zone": zone_clean["primary_zone"],
+            "primary_zone_name": zone_clean["primary_zone_name"],
+            "primary_zone_percentage": zone_clean["primary_zone_percentage"],
+            "secondary_zone": zone_clean["secondary_zone"],
+            "secondary_zone_percentage": zone_clean["secondary_zone_percentage"],
+            "zone_breakdown_pct": zone_clean["zone_breakdown_pct"],
+            "clinical_summary": zone_clean["clinical_summary"],
+            "bounding_boxes": boxes_clean
         },
         ctr=ctr_clean,
-        emergency_triage=triage_res,
+        emergency_triage=triage_clean,
         clinical_report=clinical_report,
         decision_trace=trace,
         image_assets=image_assets

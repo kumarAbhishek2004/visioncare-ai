@@ -175,14 +175,14 @@ class CardiothoracicRatioAnalyzer:
         cv2.putText(annotated, cd_text, (cardiac_left_x + 10, meas_y_cardiac - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 0, 255), 1, cv2.LINE_AA)
 
         return {
-            "ctr_ratio": ctr_ratio,
-            "ctr_percentage": ctr_pct,
-            "cardiac_diameter_px": cardiac_diameter_px,
-            "cardiac_diameter_cm": cardiac_cm,
-            "thoracic_diameter_px": thoracic_diameter_px,
-            "thoracic_diameter_cm": thoracic_cm,
+            "ctr_ratio": float(ctr_ratio),
+            "ctr_percentage": float(ctr_pct),
+            "cardiac_diameter_px": int(cardiac_diameter_px),
+            "cardiac_diameter_cm": float(cardiac_cm),
+            "thoracic_diameter_px": int(thoracic_diameter_px),
+            "thoracic_diameter_cm": float(thoracic_cm),
             "category": category,
-            "is_cardiomegaly": ctr_ratio > 0.50,
+            "is_cardiomegaly": bool(ctr_ratio > 0.50),
             "clinical_impression": clinical_impression,
             "caliper_overlay": annotated
         }

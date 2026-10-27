@@ -146,7 +146,7 @@ export default function WorkstationPage() {
               <div className="bg-radDark-900 p-2.5 rounded-lg border border-radDark-700">
                 <p className="text-[10px] text-slate-400 uppercase">Composite Score</p>
                 <p className="text-base font-bold text-slate-200 mt-0.5">
-                  {study ? `${study.iqa.overall_score} / 100` : "--"}
+                  {study?.iqa?.overall_score != null ? `${study.iqa.overall_score} / 100` : "--"}
                 </p>
               </div>
               <div className="bg-radDark-900 p-2.5 rounded-lg border border-radDark-700">
@@ -154,7 +154,9 @@ export default function WorkstationPage() {
                   Laplacian Sharpness
                 </p>
                 <p className="text-base font-bold text-slate-200 mt-0.5">
-                  {study ? study.iqa.laplacian_variance.toFixed(1) : "--"}
+                  {study?.iqa?.laplacian_variance != null
+                    ? Number(study.iqa.laplacian_variance).toFixed(1)
+                    : "--"}
                 </p>
               </div>
               <div className="bg-radDark-900 p-2.5 rounded-lg border border-radDark-700">
@@ -162,13 +164,15 @@ export default function WorkstationPage() {
                   Michelson Contrast
                 </p>
                 <p className="text-base font-bold text-slate-200 mt-0.5">
-                  {study ? `${(study.iqa.michelson_contrast * 100).toFixed(1)}%` : "--"}
+                  {study?.iqa?.michelson_contrast != null
+                    ? `${(Number(study.iqa.michelson_contrast) * 100).toFixed(1)}%`
+                    : "--"}
                 </p>
               </div>
               <div className="bg-radDark-900 p-2.5 rounded-lg border border-radDark-700">
                 <p className="text-[10px] text-slate-400 uppercase">Dynamic Range</p>
                 <p className="text-base font-bold text-slate-200 mt-0.5">
-                  {study ? `${study.iqa.dynamic_range} Gy` : "--"}
+                  {study?.iqa?.dynamic_range != null ? `${study.iqa.dynamic_range} Gy` : "--"}
                 </p>
               </div>
             </div>

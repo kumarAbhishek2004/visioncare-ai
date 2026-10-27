@@ -6,6 +6,7 @@
 visioncare_kaggle_training.py
 kaggle/visioncare_kaggle_training.py
 tests/
+sample_scans/
 
 # Large Model Weights & Checkpoints (Store on Hugging Face / S3 / Git LFS)
 *.pth
