@@ -32,8 +32,15 @@ from ml.llm.synthesizer import ClinicalReportSynthesizer
 from ml.dicom.dicom_parser import DICOMParser
 from ml.biometrics.ctr_analyzer import CardiothoracicRatioAnalyzer
 from ml.triage.emergency_triage import EmergencyTriageEngine
+from ml.llm.radiology_chatbot import RadiologyChatbot
 from backend.app.services.pdf_service import ClinicalPDFGenerator
-from backend.app.schemas.study import StudyAnalysisResponse, BatchTriageResponse, BatchTriageItem
+from backend.app.schemas.study import (
+    StudyAnalysisResponse,
+    BatchTriageResponse,
+    BatchTriageItem,
+    ChatRequest,
+    ChatResponse
+)
 
 router = APIRouter()
 
@@ -47,6 +54,7 @@ zone_mapper = AnatomicalZoneMapper()
 synthesizer = ClinicalReportSynthesizer()
 ctr_analyzer = CardiothoracicRatioAnalyzer()
 pdf_generator = ClinicalPDFGenerator()
+chatbot = RadiologyChatbot()
 
 # In-memory study cache for PDF generation
 STUDY_CACHE: Dict[str, Dict[str, Any]] = {}
@@ -416,3 +424,42 @@ def download_study_pdf(study_id: str):
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename=VisionCare_Report_{study_id}.pdf"}
     )
+
+
+@router.get("/chat/providers")
+def get_chat_providers():
+    """Returns available LLM providers configured on the backend."""
+    return chatbot.get_available_providers()
+
+
+@router.post("/chat", response_model=ChatResponse)
+def chat_with_radiologist_copilot(req: ChatRequest):
+    """
+    Conversational clinical assistant grounded in chest X-ray findings,
+    Grad-CAM++ explainability maps, CTR biometrics, and IQA metrics.
+    """
+    study_ctx = req.study_context
+    if not study_ctx and req.study_id and req.study_id in STUDY_CACHE:
+        study_ctx = STUDY_CACHE[req.study_id].get("analysis_data", {})
+
+    if not study_ctx:
+        study_ctx = {}
+
+    history_dicts = [{"role": h.role, "content": h.content} for h in (req.history or [])]
+
+    result = chatbot.chat(
+        message=req.message,
+        history=history_dicts,
+        study_context=study_ctx,
+        mode=req.mode or "clinical",
+        preferred_model=req.preferred_model or "auto"
+    )
+
+    return ChatResponse(
+        response=result["response"],
+        suggested_questions=result.get("suggested_questions", []),
+        source=result.get("source", "clinical_cds_engine"),
+        model_name=result.get("model_name", "Clinical CDS Engine")
+    )
+
+

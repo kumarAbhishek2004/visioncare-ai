@@ -96,3 +96,27 @@ class BatchTriageResponse(BaseModel):
     urgent_count: int
     routine_count: int
     worklist: List[BatchTriageItem]
+
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+
+class ChatRequest(BaseModel):
+    message: str
+    history: Optional[List[ChatMessage]] = Field(default_factory=list)
+    study_id: Optional[str] = None
+    study_context: Optional[Dict[str, Any]] = None
+    mode: Optional[str] = "clinical"
+    preferred_model: Optional[str] = "auto"
+    api_key: Optional[str] = None
+
+
+class ChatResponse(BaseModel):
+    response: str
+    suggested_questions: List[str] = Field(default_factory=list)
+    source: str
+    model_name: Optional[str] = "Clinical CDS Engine"
+
+

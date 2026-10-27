@@ -8,6 +8,7 @@ import { ResultsOverview } from "@/components/ResultsOverview";
 import { ExplainabilityView } from "@/components/ExplainabilityView";
 import { DecisionTraceView } from "@/components/DecisionTraceView";
 import { ClinicalReportView } from "@/components/ClinicalReportView";
+import { ClinicalChatbot } from "@/components/ClinicalChatbot";
 import { StudyAnalysisResponse, FindingItem } from "@/types";
 import { analyzeRadiograph } from "@/lib/api";
 import {
@@ -26,15 +27,17 @@ import {
   ShieldCheck,
   Stethoscope,
   Scan,
-  Gauge
+  Gauge,
+  MessageSquare
 } from "lucide-react";
 
 type MainNavTab = "home" | "analyze" | "reports" | "studies" | "about";
-type ResultsTab = "overview" | "explainability" | "trace" | "findings" | "technical";
+type ResultsTab = "overview" | "explainability" | "trace" | "chat" | "findings" | "technical";
 
 export default function App() {
   const [activeNav, setActiveNav] = useState<MainNavTab>("home");
   const [activeResultsTab, setActiveResultsTab] = useState<ResultsTab>("overview");
+  const [isFloatingChatOpen, setIsFloatingChatOpen] = useState<boolean>(false);
   const [study, setStudy] = useState<StudyAnalysisResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [loadingStep, setLoadingStep] = useState<string>("Analyzing radiograph...");
@@ -330,6 +333,18 @@ export default function App() {
                     </button>
 
                     <button
+                      onClick={() => setActiveResultsTab("chat")}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                        activeResultsTab === "chat"
+                          ? "bg-blue-600 text-white shadow-sm shadow-blue-500/20"
+                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                      }`}
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      <span>AI Copilot Chat</span>
+                    </button>
+
+                    <button
                       onClick={() => setActiveResultsTab("findings")}
                       className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
                         activeResultsTab === "findings"
@@ -382,6 +397,7 @@ export default function App() {
                     onNavigateTab={(tab) => {
                       if (tab === "explainability") setActiveResultsTab("explainability");
                       else if (tab === "trace") setActiveResultsTab("trace");
+                      else if (tab === "chat") setActiveResultsTab("chat");
                       else if (tab === "findings") setActiveResultsTab("findings");
                       else if (tab === "technical") setActiveResultsTab("technical");
                       else setActiveResultsTab("overview");
@@ -397,6 +413,14 @@ export default function App() {
                 {/* Sub-Tab 3: Screen 5 — AI Decision Trace */}
                 {activeResultsTab === "trace" && (
                   <DecisionTraceView study={study} />
+                )}
+
+                {/* Sub-Tab 4: Interactive AI Copilot Chatbot */}
+                {activeResultsTab === "chat" && (
+                  <ClinicalChatbot
+                    study={study}
+                    onBackToOverview={() => setActiveResultsTab("overview")}
+                  />
                 )}
 
                 {/* Sub-Tab 4: Detailed 14-Disease Breakdown Table */}
@@ -780,6 +804,30 @@ export default function App() {
           <span>Designed for Research & Clinical Education</span>
         </div>
       </footer>
+
+      {/* 6. Floating AI Copilot Trigger & Drawer */}
+      {study && (
+        <>
+          {!isFloatingChatOpen && (
+            <button
+              onClick={() => setIsFloatingChatOpen(true)}
+              className="fixed bottom-6 right-6 z-40 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-3 rounded-full shadow-xl shadow-blue-500/30 flex items-center space-x-2 transition hover:scale-105 active:scale-95 cursor-pointer border border-white/20 animate-fade-in"
+            >
+              <MessageSquare className="w-4 h-4" />
+              <span>Ask AI Copilot</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            </button>
+          )}
+
+          {isFloatingChatOpen && (
+            <ClinicalChatbot
+              study={study}
+              isFloating={true}
+              onClose={() => setIsFloatingChatOpen(false)}
+            />
+          )}
+        </>
+      )}
     </div>
   );
 }
