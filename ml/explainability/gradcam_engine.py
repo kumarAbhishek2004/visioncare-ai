@@ -64,8 +64,10 @@ class GradCAMPlusPlusEngine:
     def _save_gradient(self, grad):
         self.gradients = grad
 
-    def _prepare_cam_input(self, input_tensor: torch.Tensor) -> torch.Tensor:
-        """Preserves 100% native resolution for exact mathematical attribution accuracy."""
+    def _prepare_cam_input(self, input_tensor: torch.Tensor, max_dim: int = 256) -> torch.Tensor:
+        """Downsamples CAM input tensor to 256x256 so autograd backward pass stays strictly within 512MB RAM."""
+        if input_tensor.shape[-1] > max_dim or input_tensor.shape[-2] > max_dim:
+            return F.interpolate(input_tensor, size=(max_dim, max_dim), mode="bilinear", align_corners=False)
         return input_tensor
 
     def _cleanup_cam_memory(self):

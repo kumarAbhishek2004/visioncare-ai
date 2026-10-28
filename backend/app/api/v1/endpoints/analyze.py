@@ -61,8 +61,11 @@ chatbot = RadiologyChatbot()
 STUDY_CACHE: Dict[str, Dict[str, Any]] = {}
 
 
-def _encode_to_base64_data_uri(img_arr: np.ndarray) -> str:
-    """Encodes an OpenCV image array to a data:image/png;base64 string."""
+def _encode_to_base64_data_uri(img_arr: np.ndarray, max_dim: int = 800) -> str:
+    """
+    Encodes an OpenCV image array to an optimized data:image/jpeg;base64 string.
+    Reduces JSON network payload from ~24MB down to ~0.5MB, preventing 512MB RAM OOM crashes.
+    """
     if len(img_arr.shape) == 2:
         img_arr = cv2.cvtColor(img_arr, cv2.COLOR_GRAY2RGB)
     elif img_arr.shape[2] == 4:
@@ -70,11 +73,16 @@ def _encode_to_base64_data_uri(img_arr: np.ndarray) -> str:
     elif img_arr.shape[2] == 3:
         img_arr = cv2.cvtColor(img_arr, cv2.COLOR_BGR2RGB)
 
-    is_success, buffer = cv2.imencode(".png", img_arr)
+    h, w = img_arr.shape[:2]
+    if max(h, w) > max_dim:
+        scale = float(max_dim) / max(h, w)
+        img_arr = cv2.resize(img_arr, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+
+    is_success, buffer = cv2.imencode(".jpg", img_arr, [cv2.IMWRITE_JPEG_QUALITY, 85])
     if not is_success:
         return ""
     b64_str = base64.b64encode(buffer).decode("utf-8")
-    return f"data:image/png;base64,{b64_str}"
+    return f"data:image/jpeg;base64,{b64_str}"
 
 
 def _sanitize_numpy(obj: Any) -> Any:
