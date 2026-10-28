@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import {
   UploadCloud,
   FileText,
-  Sparkles,
+  Scan,
   ShieldCheck,
   Zap,
   CheckCircle,
@@ -98,7 +98,7 @@ export const UploadHero: React.FC<UploadHeroProps> = ({
       <div className="w-full max-w-2xl space-y-3">
         <div className="flex items-center justify-between text-xs text-slate-400 px-2">
           <span className="flex items-center gap-1.5 font-medium">
-            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+            <Scan className="w-3.5 h-3.5 text-cyan-400" />
             No X-ray image handy? Try a preloaded clinical sample:
           </span>
         </div>

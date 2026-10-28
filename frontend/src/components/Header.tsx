@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Activity, UploadCloud, Sparkles, FileDown } from "lucide-react";
+import { Activity, UploadCloud, Scan, FileDown } from "lucide-react";
 import { StudyAnalysisResponse } from "@/types";
 import { getStudyPdfUrl } from "@/lib/api";
 
@@ -82,7 +82,7 @@ export const Header: React.FC<HeaderProps> = ({
           disabled={isLoading}
           className="inline-flex items-center space-x-2 bg-radDark-800 hover:bg-radDark-700 text-slate-300 text-xs font-semibold px-3 py-2.5 rounded-lg border border-radDark-700 transition disabled:opacity-50"
         >
-          <Sparkles className="w-4 h-4 text-cyan-400" />
+          <Scan className="w-4 h-4 text-cyan-400" />
           <span>Load Sample</span>
         </button>
 

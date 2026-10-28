@@ -3,8 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
   Send,
-  Sparkles,
-  Bot,
+  MessageSquare,
   User,
   RotateCcw,
   Activity,
@@ -304,7 +303,7 @@ export const ClinicalChatbot: React.FC<ClinicalChatbotProps> = ({
                 {msg.role === "user" ? (
                   <User className="w-4 h-4" />
                 ) : (
-                  <Bot className="w-4 h-4" />
+                  <Activity className="w-4 h-4" />
                 )}
               </div>
 
@@ -364,7 +363,7 @@ export const ClinicalChatbot: React.FC<ClinicalChatbotProps> = ({
           {isLoading && (
             <div className="flex items-start gap-3 animate-fade-in">
               <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-blue-500/20">
-                <Bot className="w-4 h-4" />
+                <Activity className="w-4 h-4" />
               </div>
               <div className="bg-white border border-slate-200 rounded-2xl rounded-tl-none p-4 shadow-sm space-y-1.5">
                 <div className="flex items-center space-x-1.5">
@@ -384,7 +383,7 @@ export const ClinicalChatbot: React.FC<ClinicalChatbotProps> = ({
 
         {/* 3. Dynamic Quick Questions Bar */}
         <div className="px-4 py-2 bg-white border-t border-slate-100 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
-          <Sparkles className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+          <MessageSquare className="w-3.5 h-3.5 text-blue-600 shrink-0" />
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1">
             Suggested:
           </span>

@@ -8,7 +8,6 @@ import {
   Activity,
   Heart,
   ArrowRight,
-  Sparkles,
   AlertTriangle
 } from "lucide-react";
 import { StudyAnalysisResponse, FindingItem } from "@/types";

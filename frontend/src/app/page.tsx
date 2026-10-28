@@ -18,7 +18,6 @@ import {
   FileText,
   Clock,
   Layers,
-  Sparkles,
   RotateCcw,
   CheckCircle2,
   AlertCircle,
@@ -811,11 +810,10 @@ export default function App() {
           {!isFloatingChatOpen && (
             <button
               onClick={() => setIsFloatingChatOpen(true)}
-              className="fixed bottom-6 right-6 z-40 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-3 rounded-full shadow-xl shadow-blue-500/30 flex items-center space-x-2 transition hover:scale-105 active:scale-95 cursor-pointer border border-white/20 animate-fade-in"
+              className="fixed bottom-6 right-6 z-40 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-3 rounded-full shadow-lg shadow-blue-500/20 flex items-center space-x-2 transition hover:scale-105 active:scale-95 cursor-pointer border border-white/20 animate-fade-in"
             >
               <MessageSquare className="w-4 h-4" />
-              <span>Ask AI Copilot</span>
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>Radiology Copilot</span>
             </button>
           )}
 

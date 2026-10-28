@@ -8,8 +8,7 @@ import {
   Stethoscope,
   Info,
   Sliders,
-  Layers,
-  Sparkles
+  Layers
 } from "lucide-react";
 import { StudyAnalysisResponse } from "@/types";
 
@@ -137,8 +136,8 @@ export const ExplainabilityView: React.FC<ExplainabilityViewProps> = ({ study })
           <div className="card-surface rounded-2xl p-6 space-y-5 shadow-sm">
             <div>
               <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-blue-600" />
-                What the AI Focused On
+                <Eye className="w-5 h-5 text-blue-600" />
+                Anatomical Attention & Attribution
               </h3>
               <p className="text-xs text-slate-500 mt-1">
                 The highlighted area shows the region that most influenced the prediction.

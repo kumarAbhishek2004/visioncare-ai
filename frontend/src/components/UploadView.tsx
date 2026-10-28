@@ -5,8 +5,6 @@ import {
   UploadCloud,
   CheckCircle2,
   FileText,
-  Sparkles,
-  ArrowRight,
   Info
 } from "lucide-react";
 
@@ -167,134 +165,74 @@ export const UploadView: React.FC<UploadViewProps> = ({
         </div>
       </div>
 
-      {/* 4. Example Images Section */}
-      <div className="space-y-3.5 pt-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-blue-600" />
-            Example Images
-          </h3>
-          <span className="text-xs text-blue-600 font-semibold cursor-pointer hover:underline flex items-center gap-1">
-            View more examples <ArrowRight className="w-3.5 h-3.5" />
+      {/* 4. Visual Reference Guide for Thoracic Pathologies */}
+      <div className="space-y-4 pt-4 border-t border-slate-100">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+              Visual Reference Guide for Thoracic Pathologies
+            </h3>
+            <p className="text-xs text-slate-500">
+              Diagnostic reference and sample radiographs. Click any condition below to load and run AI analysis:
+            </p>
+          </div>
+          <span className="text-[11px] font-medium text-slate-500 self-start sm:self-auto bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-lg">
+            Interactive Examples
           </span>
         </div>
 
-        {/* 5 Clickable Example Thumbnails */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3.5">
-          <button
-            onClick={() => onSelectSample("normal")}
-            disabled={isLoading}
-            className="card-surface card-surface-hover rounded-2xl p-2.5 text-center space-y-2 group flex flex-col items-center cursor-pointer transition hover:border-blue-500 hover:shadow-md"
-          >
-            <div className="w-full aspect-square rounded-xl bg-slate-950 overflow-hidden flex items-center justify-center border border-slate-200">
-              <img
-                src="/samples/sample_1_normal_chest.png"
-                alt="Normal Chest"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                }}
-              />
-            </div>
-            <div className="space-y-0.5">
-              <span className="text-xs font-bold text-slate-800 group-hover:text-blue-600 block">
-                Normal
-              </span>
-              <span className="text-[10px] text-slate-400 block">Clear Lung Fields</span>
-            </div>
-          </button>
+        {/* Interactive Reference Card with Smooth Hover Effect */}
+        <div className="group relative rounded-2xl border border-slate-200 overflow-hidden bg-white shadow-sm hover:shadow-xl transition-all duration-300">
+          <div className="p-2 sm:p-3 overflow-hidden bg-slate-950/5">
+            <img
+              src="/pathology-examples.png"
+              alt="Visual Reference Guide: Normal, Pneumonia, Effusion, Cardiomegaly, Pneumothorax"
+              className="w-full h-auto rounded-xl object-contain transition-transform duration-500 group-hover:scale-[1.01]"
+            />
+          </div>
 
-          <button
-            onClick={() => onSelectSample("pneumonia")}
-            disabled={isLoading}
-            className="card-surface card-surface-hover rounded-2xl p-2.5 text-center space-y-2 group flex flex-col items-center cursor-pointer transition hover:border-blue-500 hover:shadow-md"
-          >
-            <div className="w-full aspect-square rounded-xl bg-slate-950 overflow-hidden flex items-center justify-center border border-slate-200">
-              <img
-                src="/samples/sample_4_pneumonia_consolidation.png"
-                alt="Pneumonia"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                }}
-              />
-            </div>
-            <div className="space-y-0.5">
-              <span className="text-xs font-bold text-slate-800 group-hover:text-blue-600 block">
-                Pneumonia
-              </span>
-              <span className="text-[10px] text-slate-400 block">Focal Infiltrates</span>
-            </div>
-          </button>
-
-          <button
-            onClick={() => onSelectSample("effusion")}
-            disabled={isLoading}
-            className="card-surface card-surface-hover rounded-2xl p-2.5 text-center space-y-2 group flex flex-col items-center cursor-pointer transition hover:border-blue-500 hover:shadow-md"
-          >
-            <div className="w-full aspect-square rounded-xl bg-slate-950 overflow-hidden flex items-center justify-center border border-slate-200">
-              <img
-                src="/samples/sample_2_pleural_effusion.png"
-                alt="Effusion"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                }}
-              />
-            </div>
-            <div className="space-y-0.5">
-              <span className="text-xs font-bold text-slate-800 group-hover:text-blue-600 block">
-                Effusion
-              </span>
-              <span className="text-[10px] text-slate-400 block">Blunted CP Angle</span>
-            </div>
-          </button>
-
-          <button
-            onClick={() => onSelectSample("cardiomegaly")}
-            disabled={isLoading}
-            className="card-surface card-surface-hover rounded-2xl p-2.5 text-center space-y-2 group flex flex-col items-center cursor-pointer transition hover:border-blue-500 hover:shadow-md"
-          >
-            <div className="w-full aspect-square rounded-xl bg-slate-950 overflow-hidden flex items-center justify-center border border-slate-200">
-              <img
-                src="/samples/sample_3_cardiomegaly.png"
-                alt="Cardiomegaly"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                }}
-              />
-            </div>
-            <div className="space-y-0.5">
-              <span className="text-xs font-bold text-slate-800 group-hover:text-blue-600 block">
-                Cardiomegaly
-              </span>
-              <span className="text-[10px] text-slate-400 block">CTR &gt; 50%</span>
-            </div>
-          </button>
-
-          <button
-            onClick={() => onSelectSample("pneumothorax")}
-            disabled={isLoading}
-            className="card-surface card-surface-hover rounded-2xl p-2.5 text-center space-y-2 group flex flex-col items-center cursor-pointer transition hover:border-blue-500 hover:shadow-md"
-          >
-            <div className="w-full aspect-square rounded-xl bg-slate-950 overflow-hidden flex items-center justify-center border border-slate-200">
-              <img
-                src="/samples/sample_5_pneumothorax.png"
-                alt="Pneumothorax"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                }}
-              />
-            </div>
-            <div className="space-y-0.5">
-              <span className="text-xs font-bold text-slate-800 group-hover:text-blue-600 block">
-                Pneumothorax
-              </span>
-              <span className="text-[10px] text-slate-400 block">Visceral Pleural Line</span>
-            </div>
-          </button>
+          {/* Quick-action Condition Pills Bar */}
+          <div className="bg-slate-50 border-t border-slate-200 px-4 py-3 flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+            <span className="text-xs font-semibold text-slate-500 mr-1 hidden md:inline">
+              Load Example:
+            </span>
+            <button
+              onClick={() => onSelectSample("normal")}
+              disabled={isLoading}
+              className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-semibold border border-slate-200 hover:border-blue-300 shadow-sm transition-all duration-150 disabled:opacity-50"
+            >
+              Normal
+            </button>
+            <button
+              onClick={() => onSelectSample("pneumonia")}
+              disabled={isLoading}
+              className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-semibold border border-slate-200 hover:border-blue-300 shadow-sm transition-all duration-150 disabled:opacity-50"
+            >
+              Pneumonia
+            </button>
+            <button
+              onClick={() => onSelectSample("effusion")}
+              disabled={isLoading}
+              className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-semibold border border-slate-200 hover:border-blue-300 shadow-sm transition-all duration-150 disabled:opacity-50"
+            >
+              Pleural Effusion
+            </button>
+            <button
+              onClick={() => onSelectSample("cardiomegaly")}
+              disabled={isLoading}
+              className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-semibold border border-slate-200 hover:border-blue-300 shadow-sm transition-all duration-150 disabled:opacity-50"
+            >
+              Cardiomegaly
+            </button>
+            <button
+              onClick={() => onSelectSample("pneumothorax")}
+              disabled={isLoading}
+              className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-semibold border border-slate-200 hover:border-blue-300 shadow-sm transition-all duration-150 disabled:opacity-50"
+            >
+              Pneumothorax
+            </button>
+          </div>
         </div>
       </div>
     </div>
