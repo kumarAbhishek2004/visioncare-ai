@@ -95,7 +95,5 @@ desktop.ini
 *.pdf
 !docs/*.pdf
 
-# Docker Configuration Files
-Dockerfile.backend
-Dockerfile.frontend
-docker-compose*.yml
+# Modal artifacts & local configs
+.modal*

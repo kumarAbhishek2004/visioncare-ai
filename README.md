@@ -108,10 +108,8 @@ x_ray/
 │   └── validation_metrics.json         # Complete validation benchmark metrics
 ├── docs/
 │   └── MODEL_CARD.md                   # Formal clinical model card & metrics
-├── Dockerfile.backend                  # Dockerfile for FastAPI backend
-├── Dockerfile.frontend                 # Dockerfile for Next.js frontend
-├── docker-compose.yml                  # One-click multi-container stack
-├── requirements.txt
+├── modal_app.py                        # Modal.com serverless deployment (8 GB RAM, 2 vCPUs)
+├── requirements.txt                    # Production backend dependencies
 └── README.md
 ```
 
@@ -119,7 +117,21 @@ x_ray/
 
 ## 🚀 Quickstart & How to Run
 
-### Option A: Direct Local Execution (Python / FastAPI)
+### Option A: Cloud Deployment (Production)
+
+1. **Deploy Backend to Modal (8 GB RAM):**
+   ```bash
+   pip install modal
+   python -m modal setup
+   python -m modal deploy modal_app.py
+   ```
+2. **Deploy Frontend to Vercel:**
+   * Import repository with root directory set to `frontend`.
+   * Add environment variable: `NEXT_PUBLIC_API_URL=https://<YOUR-MODAL-URL>.modal.run`.
+
+---
+
+### Option B: Direct Local Execution
 
 1. **Install dependencies:**
    ```bash
@@ -132,29 +144,16 @@ x_ray/
    ```
 
 3. **Open the Radiology Workstation in your browser:**
-   - Interactive Web Workstation: **`http://localhost:8000/workstation`**
    - Interactive OpenAPI Documentation: **`http://localhost:8000/docs`**
    - System Health Check: **`http://localhost:8000/health`**
 
-4. **Test the Next.js 14 Frontend (Optional):**
+4. **Start the Next.js 14 Frontend:**
    ```bash
    cd frontend
    npm install
    npm run dev
    # Workstation available at http://localhost:3000
    ```
-
----
-
-### Option B: Docker Compose (One-Click Stack)
-
-To launch both the FastAPI backend and Next.js frontend containers simultaneously:
-
-```bash
-docker-compose up --build
-```
-- Workstation UI: **`http://localhost:3000`**
-- Backend API & Swagger: **`http://localhost:8000/docs`**
 
 ---
 
