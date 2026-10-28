@@ -308,7 +308,7 @@ def analyze_study(
         }
     }
 
-    # Bound STUDY_CACHE to last 5 entries to preserve memory in 512MB RAM environments
+    # Bound STUDY_CACHE to last 5 entries to preserve memory in cloud environments
     if len(STUDY_CACHE) > 5:
         oldest = list(STUDY_CACHE.keys())[:-5]
         for k in oldest:

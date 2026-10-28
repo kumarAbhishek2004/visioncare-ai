@@ -7,7 +7,7 @@ VisionCare AI: FastAPI Main Application Gateway
 import os
 import torch
 
-# Bound PyTorch CPU threads to 1 to prevent memory spikes in 512MB cloud environments (Render Free Tier)
+# Optimize PyTorch CPU execution for cloud environments
 torch.set_num_threads(1)
 
 from fastapi import FastAPI
@@ -45,6 +45,15 @@ static_dir = os.path.join(os.path.dirname(__file__), "static")
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
+frontend_out = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "out"))
+if os.path.exists(frontend_out):
+    next_assets = os.path.join(frontend_out, "_next")
+    if os.path.exists(next_assets):
+        app.mount("/_next", StaticFiles(directory=next_assets), name="next_assets")
+    samples_dir = os.path.join(frontend_out, "samples")
+    if os.path.exists(samples_dir):
+        app.mount("/samples", StaticFiles(directory=samples_dir), name="samples")
+
 
 @app.get("/health", tags=["System"])
 def health_check():
@@ -68,6 +77,9 @@ def api_info():
 @app.get("/", tags=["Workstation"], include_in_schema=False)
 @app.get("/workstation", tags=["Workstation"], include_in_schema=False)
 def serve_workstation():
+    frontend_index = os.path.join(frontend_out, "index.html")
+    if os.path.exists(frontend_index):
+        return FileResponse(frontend_index, media_type="text/html")
     html_path = os.path.join(os.path.dirname(__file__), "static", "workstation.html")
     if os.path.exists(html_path):
         return FileResponse(html_path, media_type="text/html")

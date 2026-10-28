@@ -1,3 +1,13 @@
+---
+title: VisionCare AI Radiology Workstation
+emoji: 🩻
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # 🫁 VisionCare AI: Explainable Radiology Workstation & Clinical Decision Support
 
 An enterprise-grade, end-to-end Explainable AI (XAI) clinical decision support platform for frontal chest radiographs. Built to demonstrate rigorous medical computer vision, post-hoc uncertainty calibration, continuous feature attribution, anatomical localization, structured ACR clinical narrative synthesis, and auditable decision tracing under FDA SaMD Class II / EU AI Act frameworks.

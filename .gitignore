@@ -95,7 +95,7 @@ desktop.ini
 *.pdf
 !docs/*.pdf
 
-# Docker Configuration Files (Excluded per user request)
-Dockerfile*
+# Docker Configuration Files
+Dockerfile.backend
+Dockerfile.frontend
 docker-compose*.yml
-.dockerignore

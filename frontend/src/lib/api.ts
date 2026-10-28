@@ -1,6 +1,8 @@
 import { StudyAnalysisResponse } from "@/types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://visioncare-ai-oqot.onrender.com";
+// Defaults to relative URL ("") when frontend & backend are co-hosted (e.g. Hugging Face Spaces / Docker),
+// or reads NEXT_PUBLIC_API_URL when frontend is hosted separately on Vercel.
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 export async function analyzeRadiograph(
   file: File,
