@@ -64,7 +64,7 @@ if os.path.exists(frontend_out):
         app.mount("/samples", StaticFiles(directory=samples_dir), name="samples")
 
 
-@app.get("/health", tags=["System"])
+@app.api_route("/health", methods=["GET", "HEAD"], tags=["System"])
 def health_check():
     return {
         "status": "HEALTHY",
@@ -74,7 +74,7 @@ def health_check():
     }
 
 
-@app.get("/api", tags=["System"])
+@app.api_route("/api", methods=["GET", "HEAD"], tags=["System"])
 def api_info():
     return {
         "message": "Welcome to VisionCare AI Radiology Workstation API.",
@@ -83,8 +83,8 @@ def api_info():
     }
 
 
-@app.get("/", tags=["Workstation"], include_in_schema=False)
-@app.get("/workstation", tags=["Workstation"], include_in_schema=False)
+@app.api_route("/", methods=["GET", "HEAD"], tags=["Workstation"], include_in_schema=False)
+@app.api_route("/workstation", methods=["GET", "HEAD"], tags=["Workstation"], include_in_schema=False)
 def serve_workstation():
     frontend_index = os.path.join(frontend_out, "index.html")
     if os.path.exists(frontend_index):
