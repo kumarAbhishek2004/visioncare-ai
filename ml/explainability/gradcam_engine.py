@@ -9,6 +9,7 @@ Technical Safeguard: Attaches hooks directly to the activation tensor, bypassing
 ========================================================================================
 """
 
+import gc
 from typing import Dict, Any, Tuple, Union, Optional, List
 import numpy as np
 import cv2
@@ -63,6 +64,17 @@ class GradCAMPlusPlusEngine:
     def _save_gradient(self, grad):
         self.gradients = grad
 
+    def _prepare_cam_input(self, input_tensor: torch.Tensor) -> torch.Tensor:
+        """Preserves 100% native resolution for exact mathematical attribution accuracy."""
+        return input_tensor
+
+    def _cleanup_cam_memory(self):
+        """Immediately frees intermediate activations, autograd buffers, and memory caches."""
+        self.gradients = None
+        self.activations = None
+        self.model.zero_grad(set_to_none=True)
+        gc.collect()
+
     def generate_gradcam(
         self,
         input_tensor: torch.Tensor,
@@ -74,12 +86,14 @@ class GradCAMPlusPlusEngine:
         alpha_k = (1/Z) * sum(grad_k)
         L_GradCAM = ReLU(sum(alpha_k * A_k))
         """
-        self.model.zero_grad()
-        output = self.model(input_tensor)
+        self.model.zero_grad(set_to_none=True)
+        cam_input = self._prepare_cam_input(input_tensor)
+        output = self.model(cam_input)
         target_score = output[0, class_idx]
-        target_score.backward(retain_graph=True)
+        target_score.backward(retain_graph=False)
 
         if self.gradients is None or self.activations is None:
+            self._cleanup_cam_memory()
             return np.zeros(target_size, dtype=np.float32)
 
         grads = self.gradients[0].detach()   # [C, H, W]
@@ -89,6 +103,8 @@ class GradCAMPlusPlusEngine:
         weights = grads.mean(dim=(1, 2), keepdim=True)
         cam = (weights * acts).sum(dim=0)
         cam = F.relu(cam)
+
+        self._cleanup_cam_memory()
 
         cam_np = cam.cpu().numpy()
         cam_min, cam_max = cam_np.min(), cam_np.max()
@@ -109,12 +125,14 @@ class GradCAMPlusPlusEngine:
         """
         Computes Grad-CAM++ continuous activation map with higher-order gradient weighting.
         """
-        self.model.zero_grad()
-        output = self.model(input_tensor)
+        self.model.zero_grad(set_to_none=True)
+        cam_input = self._prepare_cam_input(input_tensor)
+        output = self.model(cam_input)
         target_score = output[0, class_idx]
-        target_score.backward(retain_graph=True)
+        target_score.backward(retain_graph=False)
 
         if self.gradients is None or self.activations is None:
+            self._cleanup_cam_memory()
             return np.zeros(target_size, dtype=np.float32)
 
         grads = self.gradients[0].detach()   # [C, H, W]
@@ -133,6 +151,8 @@ class GradCAMPlusPlusEngine:
         cam = (weights * acts).sum(dim=0)
         cam = F.relu(cam)
 
+        self._cleanup_cam_memory()
+
         cam_np = cam.cpu().numpy()
         cam_min, cam_max = cam_np.min(), cam_np.max()
         if cam_max > cam_min:
@@ -147,27 +167,30 @@ class GradCAMPlusPlusEngine:
         self,
         input_tensor: torch.Tensor,
         class_idx: int,
-        steps: int = 12,
+        steps: int = 8,
         target_size: Tuple[int, int] = (1024, 1024)
     ) -> np.ndarray:
         """
         Computes Integrated Gradients (Sundararajan et al., ICML 2017) feature attribution.
         Integrates path gradients from black baseline to input image.
         """
-        baseline = torch.zeros_like(input_tensor)
-        diff = input_tensor - baseline
-        accumulated_grads = torch.zeros_like(input_tensor)
+        cam_input = self._prepare_cam_input(input_tensor)
+        baseline = torch.zeros_like(cam_input)
+        diff = cam_input - baseline
+        accumulated_grads = torch.zeros_like(cam_input)
 
         for step in range(1, steps + 1):
             alpha = float(step) / float(steps)
             interpolated = baseline + alpha * diff
             interpolated.requires_grad_(True)
-            self.model.zero_grad()
+            self.model.zero_grad(set_to_none=True)
             out = self.model(interpolated)
             target = out[0, class_idx]
-            target.backward(retain_graph=True)
+            target.backward(retain_graph=False)
             if interpolated.grad is not None:
                 accumulated_grads += interpolated.grad.detach()
+
+        self._cleanup_cam_memory()
 
         # Multiply by input difference: (x - x') * avg_grad
         ig = (diff * (accumulated_grads / steps)).squeeze(0).abs().mean(dim=0).cpu().numpy()
@@ -192,17 +215,21 @@ class GradCAMPlusPlusEngine:
         Computes Vanilla Gradient Saliency map (Simonyan et al.):
         Takes absolute maximum gradient with respect to input pixels.
         """
-        inp = input_tensor.clone().detach().requires_grad_(True)
-        self.model.zero_grad()
+        cam_input = self._prepare_cam_input(input_tensor)
+        inp = cam_input.clone().detach().requires_grad_(True)
+        self.model.zero_grad(set_to_none=True)
         out = self.model(inp)
         target = out[0, class_idx]
-        target.backward(retain_graph=True)
+        target.backward(retain_graph=False)
 
         if inp.grad is None:
+            self._cleanup_cam_memory()
             return np.zeros(target_size, dtype=np.float32)
 
         saliency, _ = torch.max(inp.grad.detach().abs(), dim=1)
         saliency_np = saliency.squeeze(0).cpu().numpy()
+        self._cleanup_cam_memory()
+
         s_min, s_max = saliency_np.min(), saliency_np.max()
         if s_max > s_min:
             saliency_np = (saliency_np - s_min) / (s_max - s_min)

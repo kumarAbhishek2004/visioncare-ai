@@ -5,6 +5,11 @@ VisionCare AI: FastAPI Main Application Gateway
 """
 
 import os
+import torch
+
+# Bound PyTorch CPU threads to 1 to prevent memory spikes in 512MB cloud environments (Render Free Tier)
+torch.set_num_threads(1)
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles

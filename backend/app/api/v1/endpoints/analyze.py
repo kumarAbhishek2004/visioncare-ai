@@ -11,6 +11,7 @@ import os
 import io
 import uuid
 import base64
+import gc
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 
@@ -306,6 +307,16 @@ def analyze_study(
             "caliper_overlay": ctr_res["caliper_overlay"]
         }
     }
+
+    # Bound STUDY_CACHE to last 5 entries to preserve memory in 512MB RAM environments
+    if len(STUDY_CACHE) > 5:
+        oldest = list(STUDY_CACHE.keys())[:-5]
+        for k in oldest:
+            STUDY_CACHE.pop(k, None)
+
+    # Free transient image variables
+    del image_gray, enhanced_img, opt_bone, opt_inverted, heatmap, heatmap_overlay
+    gc.collect()
 
     return StudyAnalysisResponse(
         study_id=study_id,
