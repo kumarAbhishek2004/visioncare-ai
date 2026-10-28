@@ -7,8 +7,17 @@ VisionCare AI: FastAPI Main Application Gateway
 import os
 import torch
 
-# Optimize PyTorch CPU execution for cloud environments
+# Optimize PyTorch CPU execution for 512MB cloud environments (Render Free Tier)
 torch.set_num_threads(1)
+
+def trim_memory():
+    """Forces Linux kernel to release free heap pages back to the OS."""
+    try:
+        import ctypes
+        libc = ctypes.CDLL("libc.so.6")
+        libc.malloc_trim(0)
+    except Exception:
+        pass
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware

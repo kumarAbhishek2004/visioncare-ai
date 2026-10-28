@@ -314,9 +314,15 @@ def analyze_study(
         for k in oldest:
             STUDY_CACHE.pop(k, None)
 
-    # Free transient image variables
+    # Free transient image variables & force Linux heap page trim
     del image_gray, enhanced_img, opt_bone, opt_inverted, heatmap, heatmap_overlay
     gc.collect()
+    try:
+        import ctypes
+        libc = ctypes.CDLL("libc.so.6")
+        libc.malloc_trim(0)
+    except Exception:
+        pass
 
     return StudyAnalysisResponse(
         study_id=study_id,
