@@ -20,11 +20,14 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# CORS Middleware
+# CORS Middleware: allow web deployments (e.g. Vercel, Netlify) to access the API smoothly
+cors_origins = list(settings.CORS_ORIGINS)
+allow_all = "*" in cors_origins or os.environ.get("CORS_ALLOW_ALL", "true").lower() == "true"
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True,
+    allow_origins=["*"] if allow_all else cors_origins,
+    allow_credentials=False if allow_all else True,
     allow_methods=["*"],
     allow_headers=["*"],
 )

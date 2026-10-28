@@ -22,7 +22,8 @@ sample_scans/
 pretrained/*.pth
 pretrained/*.pt
 
-# Allow JSON calibration parameters and validation metrics in pretrained/
+# Allow DenseNet121 model weights (28MB, within GitHub 100MB limit) and JSON calibrations
+!pretrained/densenet121_nih14_best.pth
 !pretrained/*.json
 
 # Medical Imaging Data & Raw Archives
