@@ -366,12 +366,12 @@ SAFETY & OPERATIONAL RULES:
                     return (
                         f"**Heart Size Evaluation (CTR: {ctr_pct}%):**\n\n"
                         f"• **Normal Heart Size:** The AI measured the heart width ({c_diam} cm) relative to the chest cavity ({t_diam} cm), producing a CTR of **{ctr_pct}%**.\n"
-                        f"• Because this falls within the normal threshold (≤ 50%), the cardiac silhouette appears **completely normal**."
+                        f"• Because this falls within the normal threshold (<= 50%), the cardiac silhouette appears **completely normal**."
                     )
             else:
                 return (
                     f"### Cardiothoracic Ratio (CTR) Biometric Analysis\n\n"
-                    f"• **Transverse CTR:** **{ctr_pct}%** (Classification: `{'CARDIOMEGALY (>50%)' if is_enlarged else 'NORMAL SILHOUETTE (≤50%)'}`)\n"
+                    f"• **Transverse CTR:** **{ctr_pct}%** (Classification: `{'CARDIOMEGALY (>50%)' if is_enlarged else 'NORMAL SILHOUETTE (<= 50%)'}`)\n"
                     f"• **Maximal Cardiac Diameter:** **{c_diam} cm** (measured from right cardiac border to left apex caliper)\n"
                     f"• **Internal Thoracic Diameter:** **{t_diam} cm** (measured between inner rib margins at diaphragmatic apices)\n"
                     f"• **Diagnostic Significance:** "

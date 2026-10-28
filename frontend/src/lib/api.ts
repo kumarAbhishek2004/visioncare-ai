@@ -1,7 +1,7 @@
 import { StudyAnalysisResponse } from "@/types";
 
-// Defaults to your deployed Render backend, or reads custom NEXT_PUBLIC_API_URL
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://visioncare-ai-oqot.onrender.com";
+// Configured via NEXT_PUBLIC_API_URL in production (e.g. Modal.com URL or local backend)
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export async function analyzeRadiograph(
   file: File,

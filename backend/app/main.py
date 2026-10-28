@@ -7,8 +7,8 @@ VisionCare AI: FastAPI Main Application Gateway
 import os
 import torch
 
-# Optimize PyTorch CPU execution for 512MB cloud environments (Render Free Tier)
-torch.set_num_threads(1)
+# Bound PyTorch CPU threads for predictable performance in cloud environments
+torch.set_num_threads(2)
 
 def trim_memory():
     """Forces Linux kernel to release free heap pages back to the OS."""
