@@ -29,6 +29,9 @@ from ml.classification.inference import DiseaseClassifier, DISEASE_CLASSES
 from ml.explainability.gradcam_engine import GradCAMPlusPlusEngine
 from ml.explainability.zone_mapper import AnatomicalZoneMapper
 from ml.explainability.decision_trace import DecisionTraceLogger
+from ml.explainability.counterfactual_engine import CounterfactualEngine
+from ml.explainability.why_not_engine import WhyNotDifferentialEngine
+from ml.explainability.evidence_scorecard import EvidenceScorecardEngine
 from ml.llm.synthesizer import ClinicalReportSynthesizer
 from ml.dicom.dicom_parser import DICOMParser
 from ml.biometrics.ctr_analyzer import CardiothoracicRatioAnalyzer
@@ -52,6 +55,7 @@ extractor = PulmonaryRegionExtractor()
 classifier = DiseaseClassifier()
 cam_engine = GradCAMPlusPlusEngine(classifier.model)
 zone_mapper = AnatomicalZoneMapper()
+counterfactual_engine = CounterfactualEngine(classifier.model)
 synthesizer = ClinicalReportSynthesizer()
 ctr_analyzer = CardiothoracicRatioAnalyzer()
 pdf_generator = ClinicalPDFGenerator()
@@ -223,8 +227,45 @@ def analyze_study(
     # 7. Module 5B: 5-Zone Anatomical Mapper
     zone_res = zone_mapper.map_heatmap_to_zones(heatmap, seg_res["lung_mask"])
 
+    # 7B. Module 5D: Counterfactual & Perturbation Engine (Level 5 XAI)
+    target_orig_prob = 0.5
+    if primary:
+        target_orig_prob = float(primary[0]["probability"])
+    elif clf_res.get("all_predictions"):
+        for p in clf_res["all_predictions"]:
+            if p["disease"] == target_disease:
+                target_orig_prob = float(p["probability"])
+                break
+
+    cf_res = counterfactual_engine.generate_counterfactual(
+        image_gray=image_gray,
+        heatmap=heatmap,
+        target_idx=target_idx,
+        target_disease=target_disease,
+        original_probability=target_orig_prob,
+        bounding_boxes=boxes,
+        lung_mask=seg_res.get("lung_mask")
+    )
+
     # 8. Module 8: Quantitative Cardiothoracic Ratio (CTR) Biometrics
     ctr_res = ctr_analyzer.analyze(image_gray, seg_res["lung_mask"], pixel_spacing=pixel_spacing)
+
+    # 8B. Module 5E: "Why Not?" Comparative Differential Reasoning
+    why_not_res = WhyNotDifferentialEngine.evaluate_differentials(
+        all_predictions=clf_res.get("all_predictions", []),
+        primary_findings=clf_res.get("primary_findings", []),
+        ctr_percentage=ctr_res.get("ctr_percentage"),
+        primary_zone=zone_res.get("primary_zone_name")
+    )
+
+    # 8C. Module 5F: Multimodal Evidence Summary & Trust Scorecard
+    scorecard_res = EvidenceScorecardEngine.evaluate_scorecard(
+        iqa_result=iqa_res,
+        classification_result=clf_res,
+        zone_result=zone_res,
+        counterfactual_result=cf_res,
+        bounding_boxes=boxes
+    )
 
     # 9. Module 9: Emergency Department (ED) STAT Triage Prioritization
     triage_res = EmergencyTriageEngine.evaluate_triage(clf_res, iqa_res, ctr_res)
@@ -266,14 +307,20 @@ def analyze_study(
         "lung_mask": _encode_to_base64_data_uri(seg_res["lung_mask"]),
         "overlay_mask": _encode_to_base64_data_uri(seg_res["overlay_view"]),
         "heatmap_overlay": _encode_to_base64_data_uri(heatmap_overlay),
-        "caliper_overlay": _encode_to_base64_data_uri(ctr_res["caliper_overlay"])
+        "caliper_overlay": _encode_to_base64_data_uri(ctr_res["caliper_overlay"]),
+        "occluded": _encode_to_base64_data_uri(cf_res["occluded_image"]),
+        "occluded_annotated": _encode_to_base64_data_uri(cf_res["occluded_annotated"])
     }
 
     # Clean non-serializable elements from ctr_res before returning
     ctr_clean = {k: v for k, v in ctr_res.items() if k != "caliper_overlay"}
+    cf_clean = {k: v for k, v in cf_res.items() if k not in ("occluded_image", "occluded_annotated")}
 
     # Sanitize all outputs so numpy types (np.int64, np.float32) never reach Pydantic serializers
     ctr_clean = _sanitize_numpy(ctr_clean)
+    cf_clean = _sanitize_numpy(cf_clean)
+    why_not_clean = _sanitize_numpy(why_not_res)
+    scorecard_clean = _sanitize_numpy(scorecard_res)
     iqa_clean = _sanitize_numpy(iqa_res)
     clf_clean = _sanitize_numpy(clf_res)
     zone_clean = _sanitize_numpy(zone_res)
@@ -302,6 +349,9 @@ def analyze_study(
             "pulmonary_extraction": pulmonary_clean,
             "classification": clf_clean,
             "explainability": zone_clean,
+            "counterfactual": cf_clean,
+            "why_not_differentials": why_not_clean,
+            "evidence_scorecard": scorecard_clean,
             "ctr": ctr_clean,
             "emergency_triage": triage_clean,
             "clinical_report": clinical_report,
@@ -312,7 +362,8 @@ def analyze_study(
             "enhanced": enhanced_img,
             "overlay_mask": seg_res["overlay_view"],
             "heatmap_overlay": heatmap_overlay,
-            "caliper_overlay": ctr_res["caliper_overlay"]
+            "caliper_overlay": ctr_res["caliper_overlay"],
+            "occluded": cf_res["occluded_image"]
         }
     }
 
@@ -353,6 +404,9 @@ def analyze_study(
             "clinical_summary": zone_clean["clinical_summary"],
             "bounding_boxes": boxes_clean
         },
+        counterfactual=cf_clean,
+        why_not_differentials=why_not_clean,
+        evidence_scorecard=scorecard_clean,
         ctr=ctr_clean,
         emergency_triage=triage_clean,
         clinical_report=clinical_report,

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Activity, User } from "lucide-react";
+import { Activity } from "lucide-react";
 
 interface NavbarProps {
   activeNav: "home" | "analyze" | "reports" | "studies" | "about";
@@ -85,16 +85,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             About
           </button>
         </nav>
-
-        {/* Right: User / Action Pill */}
-        <div className="flex items-center space-x-3">
-          <div className="flex items-center space-x-2 bg-slate-100 hover:bg-slate-200/80 px-3 py-1.5 rounded-full border border-slate-200 transition cursor-pointer">
-            <div className="w-6 h-6 rounded-full bg-blue-600 text-white font-semibold text-[10px] flex items-center justify-center">
-              DR
-            </div>
-            <span className="text-xs font-semibold text-slate-700">Dr. User</span>
-          </div>
-        </div>
       </div>
     </header>
   );

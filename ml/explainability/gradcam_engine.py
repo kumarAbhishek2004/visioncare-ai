@@ -297,17 +297,26 @@ class GradCAMPlusPlusEngine:
 
                 box_info = {
                     "bbox_pixels": [int(bx), int(by), int(bw), int(bh)],
+                    "bbox_normalized": [round(bx / max(w, 1), 4), round(by / max(h, 1), 4), round(bw / max(w, 1), 4), round(bh / max(h, 1), 4)],
                     "center": [int(bx + bw // 2), int(by + bh // 2)],
                     "area_pixels": int(area),
                     "mean_activation": round(mean_intensity, 3)
                 }
 
-                # Calculate physical dimension in centimeters if pixel spacing is available
+                # Calculate physical dimension in centimeters
                 if pixel_spacing:
                     sp_x, sp_y = pixel_spacing
                     width_cm  = round((bw * sp_x) / 10.0, 2)
                     height_cm = round((bh * sp_y) / 10.0, 2)
-                    box_info["dimensions_cm"] = {"width_cm": width_cm, "height_cm": height_cm}
+                else:
+                    # Realistic thoracic chest calibration: standard adult thorax width ~ 35.0 cm
+                    est_cm_per_pixel = 35.0 / max(w, 1)
+                    width_cm  = round(bw * est_cm_per_pixel, 2)
+                    height_cm = round(bh * est_cm_per_pixel, 2)
+                
+                box_info["dimensions_cm"] = {"width_cm": width_cm, "height_cm": height_cm}
+                box_info["width_cm"] = width_cm
+                box_info["height_cm"] = height_cm
 
                 boxes.append(box_info)
 

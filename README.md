@@ -115,45 +115,135 @@ x_ray/
 
 ---
 
-## 🚀 Quickstart & How to Run
+## 🚀 Quickstart & Getting Started
 
-### Option A: Cloud Deployment (Production)
+Follow these steps to run VisionCare AI locally in under 5 minutes.
 
-1. **Deploy Backend to Modal (8 GB RAM):**
-   ```bash
-   pip install modal
-   python -m modal setup
-   python -m modal deploy modal_app.py
-   ```
-2. **Deploy Frontend to Vercel:**
-   * Import repository with root directory set to `frontend`.
-   * Add environment variable: `NEXT_PUBLIC_API_URL=https://<YOUR-MODAL-URL>.modal.run`.
+### 📋 Prerequisites
+
+Before starting, make sure you have installed:
+- **Python 3.10+** (Tested on Python 3.11, 3.12, 3.13)
+- **Node.js 18+** & **npm** (Download from [nodejs.org](https://nodejs.org/))
+- **Git**
 
 ---
 
-### Option B: Direct Local Execution
+### Step 1: Clone the Repository
 
-1. **Install dependencies:**
+```bash
+git clone https://github.com/kumarAbhishek2004/visioncare-ai.git
+cd visioncare-ai
+```
+
+---
+
+### Step 2: Set Up & Start the Backend
+
+1. **Create and activate a virtual environment** *(strongly recommended to avoid environment conflicts)*:
+   ```bash
+   python -m venv venv
+   ```
+   - **Windows (PowerShell):**
+     ```powershell
+     .\venv\Scripts\Activate.ps1
+     ```
+   - **macOS / Linux:**
+     ```bash
+     source venv/bin/activate
+     ```
+
+2. **Install backend dependencies:**
    ```bash
    pip install -r requirements.txt
    ```
+   > *Note: Pre-trained DenseNet-121 weights (`pretrained/densenet121_nih14_best.pth`) and threshold calibrations are already bundled in the repository.*
 
-2. **Start the FastAPI Backend:**
+3. **Configure Environment Variables:**
    ```bash
-   uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
+   # On Windows (PowerShell):
+   Copy-Item .env.example .env
+
+   # On macOS / Linux:
+   cp .env.example .env
    ```
+   Open `.env` and add your **Groq API Key** (Free at [console.groq.com](https://console.groq.com/)):
+   ```env
+   GROQ_API_KEY=gsk_your_groq_api_key_here
+   OPENAI_MODEL=openai/gpt-oss-120b
+   OPENAI_BASE_URL=https://api.groq.com/openai/v1
+   ```
+   *(If no API key is provided, the platform automatically switches to its offline deterministic clinical report synthesizer).*
 
-3. **Open the Radiology Workstation in your browser:**
-   - Interactive OpenAPI Documentation: **`http://localhost:8000/docs`**
-   - System Health Check: **`http://localhost:8000/health`**
+4. **Start the FastAPI Backend Server:**
+   ```bash
+   python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
+   ```
+   - Interactive OpenAPI Documentation: [http://localhost:8000/docs](http://localhost:8000/docs)
+   - System Health Check: [http://localhost:8000/health](http://localhost:8000/health)
 
-4. **Start the Next.js 14 Frontend:**
+---
+
+### Step 3: Set Up & Start the Frontend
+
+In a **new terminal window**, navigate to the `frontend/` directory:
+
+1. **Install Node packages:**
    ```bash
    cd frontend
    npm install
-   npm run dev
-   # Workstation available at http://localhost:3000
    ```
+
+2. **Start the Next.js Development Server:**
+   ```bash
+   npm run dev
+   ```
+
+3. **Open the Radiology Workstation:**
+   Navigate to [http://localhost:3000](http://localhost:3000) in your web browser.
+
+---
+
+### 🧪 Trying Sample Scans
+
+The repository includes curated test cases in the `sample_scans/` folder:
+- `sample_1_normal_chest.png` — Clear bilateral lung fields
+- `sample_2_pleural_effusion.png` — Blunting of the costophrenic angle
+- `sample_3_cardiomegaly.png` — Enlarged cardiac silhouette (CTR > 0.50)
+- `sample_4_pneumonia_consolidation.png` — Patchy focal infiltrates
+- `sample_5_dicom_study.dcm` — Raw medical DICOM format with patient metadata
+
+You can also click any of the preloaded example buttons directly in the workstation UI to run instant inference without uploading files.
+
+---
+
+### ☁️ Production Cloud Deployment
+
+#### Backend on Modal.com (8 GB RAM Serverless Container)
+```bash
+pip install modal
+python -m modal setup
+python -m modal deploy modal_app.py
+```
+Modal will build the container with PyTorch and output a permanent HTTPS URL:
+`https://<username>--visioncare-radiology-fastapi-app.modal.run`
+
+#### Frontend on Vercel
+1. Import the GitHub repository into [Vercel](https://vercel.com/).
+2. Set **Root Directory** to `frontend`.
+3. Add Environment Variable:
+   - **Key:** `NEXT_PUBLIC_API_URL`
+   - **Value:** `https://<YOUR-MODAL-URL>.modal.run`
+4. Click **Deploy**.
+
+---
+
+### 🛠️ Troubleshooting
+
+- **`ModuleNotFoundError: No module named 'cv2'`:**
+  Ensure you are using `python -m uvicorn ...` instead of bare `uvicorn`, or ensure your virtual environment is activated (`.\venv\Scripts\Activate.ps1`).
+- **Port 8000 already in use:**
+  Start uvicorn on another port with `--port 8001`, and update `NEXT_PUBLIC_API_URL=http://localhost:8001` in `frontend/.env.local`.
+
 
 ---
 

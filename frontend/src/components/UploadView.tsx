@@ -103,24 +103,24 @@ export const UploadView: React.FC<UploadViewProps> = ({
               onUpload(event);
             }
           }}
-          className={`lg:col-span-8 p-8 sm:p-12 rounded-3xl border-2 border-dashed transition-all duration-200 flex flex-col items-center justify-center text-center space-y-4 ${
+          className={`lg:col-span-8 p-8 sm:p-12 rounded-3xl border-2 border-dashed transition-all duration-300 flex flex-col items-center justify-center text-center space-y-4 cursor-pointer group ${
             isDragging
-              ? "border-blue-500 bg-blue-50/50"
-              : "border-slate-300 bg-white hover:border-blue-400 hover:bg-slate-50/50 shadow-sm"
+              ? "border-blue-500 bg-blue-50/70 shadow-lg shadow-blue-500/10 scale-[1.01]"
+              : "border-slate-300 bg-white hover:border-blue-400 hover:bg-slate-50/70 shadow-sm hover:shadow-md"
           }`}
         >
-          <div className="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner">
+          <div className="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner group-hover:scale-110 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
             <UploadCloud className="w-8 h-8" />
           </div>
 
           <div className="space-y-1">
-            <p className="text-base font-bold text-slate-800">
-              Drag & drop your image here
+            <p className="text-base font-bold text-slate-800 group-hover:text-blue-600 transition-colors">
+              Drag & drop your radiograph here
             </p>
-            <p className="text-xs text-slate-400">or</p>
+            <p className="text-xs text-slate-400">or click to browse local files</p>
           </div>
 
-          <label className="cursor-pointer inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-5 py-2.5 rounded-xl shadow-sm transition">
+          <label className="cursor-pointer inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold text-xs px-6 py-2.5 rounded-xl shadow-md shadow-blue-500/20 hover:shadow-blue-500/35 transition-all duration-200 hover:-translate-y-0.5">
             <FileText className="w-4 h-4" />
             <span>Browse Files</span>
             <input
@@ -200,35 +200,35 @@ export const UploadView: React.FC<UploadViewProps> = ({
             <button
               onClick={() => onSelectSample("normal")}
               disabled={isLoading}
-              className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-semibold border border-slate-200 hover:border-blue-300 shadow-sm transition-all duration-150 disabled:opacity-50"
+              className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-semibold border border-slate-200 hover:border-blue-400 shadow-xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50 cursor-pointer"
             >
               Normal
             </button>
             <button
               onClick={() => onSelectSample("pneumonia")}
               disabled={isLoading}
-              className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-semibold border border-slate-200 hover:border-blue-300 shadow-sm transition-all duration-150 disabled:opacity-50"
+              className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-semibold border border-slate-200 hover:border-blue-400 shadow-xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50 cursor-pointer"
             >
               Pneumonia
             </button>
             <button
               onClick={() => onSelectSample("effusion")}
               disabled={isLoading}
-              className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-semibold border border-slate-200 hover:border-blue-300 shadow-sm transition-all duration-150 disabled:opacity-50"
+              className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-semibold border border-slate-200 hover:border-blue-400 shadow-xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50 cursor-pointer"
             >
               Pleural Effusion
             </button>
             <button
               onClick={() => onSelectSample("cardiomegaly")}
               disabled={isLoading}
-              className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-semibold border border-slate-200 hover:border-blue-300 shadow-sm transition-all duration-150 disabled:opacity-50"
+              className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-semibold border border-slate-200 hover:border-blue-400 shadow-xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50 cursor-pointer"
             >
               Cardiomegaly
             </button>
             <button
               onClick={() => onSelectSample("pneumothorax")}
               disabled={isLoading}
-              className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-semibold border border-slate-200 hover:border-blue-300 shadow-sm transition-all duration-150 disabled:opacity-50"
+              className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-semibold border border-slate-200 hover:border-blue-400 shadow-xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50 cursor-pointer"
             >
               Pneumothorax
             </button>

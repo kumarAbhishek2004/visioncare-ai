@@ -230,13 +230,23 @@ export default function App() {
     study ? study.classification.all_predictions || study.classification.all_findings || [] : [];
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white relative overflow-x-hidden">
+      {/* Precision Ambient Background Atmosphere */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 bg-dots-subtle opacity-70"></div>
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <div className="absolute -top-36 left-1/2 -translate-x-1/2 w-[850px] h-[450px] bg-gradient-to-b from-blue-400/15 via-cyan-400/8 to-transparent blur-3xl rounded-full"></div>
+        <div className="absolute top-1/3 -left-48 w-80 h-80 bg-blue-300/10 blur-3xl rounded-full animate-pulse-glow"></div>
+        <div className="absolute top-2/3 -right-48 w-80 h-80 bg-cyan-300/10 blur-3xl rounded-full animate-pulse-glow"></div>
+      </div>
+
       {/* 1. Global Navigation Bar */}
-      <Navbar
-        activeNav={activeNav}
-        onNavChange={(nav) => setActiveNav(nav)}
-        hasStudy={!!study}
-      />
+      <div className="relative z-50">
+        <Navbar
+          activeNav={activeNav}
+          onNavChange={(nav) => setActiveNav(nav)}
+          hasStudy={!!study}
+        />
+      </div>
 
       {/* 2. Global Error Banner */}
       {errorMessage && (
@@ -273,7 +283,7 @@ export default function App() {
       )}
 
       {/* 4. Main View Routing */}
-      <div className="flex-1">
+      <div className="flex-1 relative z-10">
         {/* Page 1: Landing / Home */}
         {activeNav === "home" && (
           <HomePage onGetStarted={() => setActiveNav("analyze")} />

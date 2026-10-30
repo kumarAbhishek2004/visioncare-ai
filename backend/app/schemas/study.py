@@ -68,6 +68,18 @@ class StudyAnalysisResponse(BaseModel):
     pulmonary_extraction: Dict[str, Any]
     classification: Dict[str, Any]
     explainability: Dict[str, Any]
+    counterfactual: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Level 5: Perturbation-based causal verification and what-if explanation"
+    )
+    why_not_differentials: Optional[List[Dict[str, Any]]] = Field(
+        default_factory=list,
+        description="Level 3+: Comparative differential reasoning explaining why alternative conditions were excluded"
+    )
+    evidence_scorecard: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Multimodal clinical trust index & 4-pillar explanation scorecard"
+    )
     ctr: Optional[Dict[str, Any]] = Field(default=None, description="Quantitative Cardiothoracic Ratio Biometrics")
     emergency_triage: Optional[Dict[str, Any]] = Field(default=None, description="ED STAT Clinical Triage Prioritization")
     clinical_report: ClinicalReportResponse

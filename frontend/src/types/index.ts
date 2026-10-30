@@ -14,6 +14,7 @@ export interface FindingItem {
 
 export interface BBoxItem {
   bbox_pixels: [number, number, number, number];
+  bbox_normalized?: [number, number, number, number];
   center: [number, number];
   area_pixels: number;
   mean_activation: number;
@@ -21,6 +22,8 @@ export interface BBoxItem {
     width_cm: number;
     height_cm: number;
   };
+  width_cm?: number;
+  height_cm?: number;
 }
 
 export interface DecisionTraceStep {
@@ -118,6 +121,54 @@ export interface EmergencyTriageData {
   triggered_criteria: string[];
 }
 
+export interface CounterfactualData {
+  target_disease: string;
+  original_probability: number;
+  original_probability_pct: number;
+  occluded_probability: number;
+  occluded_probability_pct: number;
+  probability_drop: number;
+  probability_drop_pct: number;
+  causal_status: string;
+  is_causally_verified: boolean;
+  causal_summary: string;
+  what_if_narrative: string;
+  perturbed_area_pixels: number;
+}
+
+export interface WhyNotDifferentialItem {
+  disease: string;
+  probability: number;
+  probability_pct: number;
+  threshold: number;
+  decision_margin: number;
+  status: string;
+  badge: string;
+  anatomical_focus: string;
+  negative_evidence: string[];
+  ruling_summary: string;
+}
+
+export interface EvidenceScorecardPillar {
+  points: number;
+  max_points: number;
+  tier: string;
+  description: string;
+}
+
+export interface EvidenceScorecardData {
+  overall_trust_score: number;
+  overall_trust_tier: string;
+  trust_badge: string;
+  executive_summary: string;
+  pillars: {
+    visual_localization: EvidenceScorecardPillar;
+    uncertainty_quantification: EvidenceScorecardPillar;
+    causal_verification: EvidenceScorecardPillar;
+    image_quality: EvidenceScorecardPillar;
+  };
+}
+
 export interface StudyAnalysisResponse {
   study_id: string;
   timestamp: string;
@@ -133,6 +184,9 @@ export interface StudyAnalysisResponse {
   pulmonary_extraction: PulmonaryExtractionData;
   classification: ClassificationData;
   explainability: ExplainabilityData;
+  counterfactual?: CounterfactualData;
+  why_not_differentials?: WhyNotDifferentialItem[];
+  evidence_scorecard?: EvidenceScorecardData;
   ctr?: CTRData;
   emergency_triage?: EmergencyTriageData;
   clinical_report: ClinicalReport;
@@ -146,5 +200,7 @@ export interface StudyAnalysisResponse {
     overlay_mask: string;
     heatmap_overlay: string;
     caliper_overlay?: string;
+    occluded?: string;
+    occluded_annotated?: string;
   };
 }

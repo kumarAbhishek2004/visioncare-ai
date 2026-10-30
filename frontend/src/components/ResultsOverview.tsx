@@ -68,65 +68,65 @@ export const ResultsOverview: React.FC<ResultsOverviewProps> = ({
       {/* 2. Four Key Image Views Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {/* Card 1: Original X-ray */}
-        <div className="card-surface rounded-2xl overflow-hidden shadow-sm flex flex-col">
+        <div className="card-surface rounded-2xl overflow-hidden shadow-sm flex flex-col group hover:shadow-md transition">
           <div className="p-3 border-b border-slate-100 flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-800">Original X-ray</span>
+            <span className="text-xs font-bold text-slate-800">Original Radiograph</span>
           </div>
-          <div className="relative aspect-square bg-black flex items-center justify-center p-1">
+          <div className="relative aspect-square bg-slate-950 overflow-hidden">
             <img
               src={study.image_assets.original}
-              alt="Original X-ray"
-              className="max-h-full max-w-full object-contain"
+              alt="Original Radiograph"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             />
           </div>
         </div>
 
         {/* Card 2: AI Heatmap */}
-        <div className="card-surface rounded-2xl overflow-hidden shadow-sm flex flex-col">
+        <div className="card-surface rounded-2xl overflow-hidden shadow-sm flex flex-col group hover:shadow-md transition">
           <div className="p-3 border-b border-slate-100 flex flex-col">
-            <span className="text-xs font-bold text-slate-800">AI Heatmap</span>
-            <span className="text-[10px] text-slate-400">What the AI focused on</span>
+            <span className="text-xs font-bold text-slate-800">Grad-CAM++ Attribution</span>
+            <span className="text-[10px] text-slate-400">Visual feature localization</span>
           </div>
-          <div className="relative aspect-square bg-black flex items-center justify-center p-1">
+          <div className="relative aspect-square bg-slate-950 overflow-hidden">
             <img
               src={study.image_assets.original}
-              alt="Base X-ray"
-              className="max-h-full max-w-full object-contain"
+              alt="Base Radiograph"
+              className="w-full h-full object-cover"
             />
             <img
               src={study.image_assets.heatmap_overlay}
-              alt="AI Heatmap Overlay"
-              className="absolute inset-0 m-auto max-h-full max-w-full object-contain pointer-events-none mix-blend-screen opacity-80"
+              alt="Grad-CAM++ Overlay"
+              className="absolute inset-0 w-full h-full object-cover pointer-events-none mix-blend-screen opacity-85 group-hover:opacity-100 transition-opacity"
             />
           </div>
         </div>
 
         {/* Card 3: Enhanced Image */}
-        <div className="card-surface rounded-2xl overflow-hidden shadow-sm flex flex-col">
+        <div className="card-surface rounded-2xl overflow-hidden shadow-sm flex flex-col group hover:shadow-md transition">
           <div className="p-3 border-b border-slate-100 flex flex-col">
-            <span className="text-xs font-bold text-slate-800">Enhanced Image</span>
-            <span className="text-[10px] text-slate-400">Improved visibility</span>
+            <span className="text-xs font-bold text-slate-800">Diagnostic Contrast</span>
+            <span className="text-[10px] text-slate-400">CLAHE parenchymal equalization</span>
           </div>
-          <div className="relative aspect-square bg-black flex items-center justify-center p-1">
+          <div className="relative aspect-square bg-slate-950 overflow-hidden">
             <img
               src={study.image_assets.enhanced}
-              alt="CLAHE Enhanced Image"
-              className="max-h-full max-w-full object-contain"
+              alt="CLAHE Enhanced Radiograph"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             />
           </div>
         </div>
 
         {/* Card 4: Lung Mask */}
-        <div className="card-surface rounded-2xl overflow-hidden shadow-sm flex flex-col">
+        <div className="card-surface rounded-2xl overflow-hidden shadow-sm flex flex-col group hover:shadow-md transition">
           <div className="p-3 border-b border-slate-100 flex flex-col">
-            <span className="text-xs font-bold text-slate-800">Lung Mask</span>
-            <span className="text-[10px] text-slate-400">Detected lung region</span>
+            <span className="text-xs font-bold text-slate-800">Pulmonary Segmentation</span>
+            <span className="text-[10px] text-slate-400">Bilateral lung field boundary</span>
           </div>
-          <div className="relative aspect-square bg-black flex items-center justify-center p-1">
+          <div className="relative aspect-square bg-slate-950 overflow-hidden">
             <img
               src={study.image_assets.overlay_mask}
               alt="Pulmonary Lung Mask"
-              className="max-h-full max-w-full object-contain"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             />
           </div>
         </div>
