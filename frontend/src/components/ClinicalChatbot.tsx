@@ -33,7 +33,7 @@ export const ClinicalChatbot: React.FC<ClinicalChatbotProps> = ({
     {
       role: "assistant",
       content: study
-        ? `Hello! I am your **VisionCare Clinical Copilot**. I have reviewed the radiograph findings for **Patient ${study.patient_id}**:\n\n• **Primary Assessment:** **${study.classification.all_predictions?.[0]?.disease || "Clear"}** (${study.classification.all_predictions?.[0]?.probability_pct || 0}% confidence)\n• **Visual Localization:** Focus concentrated in the **${study.explainability.primary_zone_name || "Bilateral Lungs"}**\n• **Heart Size (CTR):** Transverse cardiothoracic ratio is **${study.ctr?.ctr_percentage || "--"}%** (${study.ctr?.is_cardiomegaly ? "Cardiomegaly" : "Normal"})\n• **Image Quality:** **${Math.round(study.iqa.overall_score)}/100** (${study.iqa.quality_tier})\n\nFeel free to ask any question about this patient's report, findings, heatmaps, or general clinical radiology concepts.`
+        ? `Hello! I am your **VisionCare Clinical Copilot**. I have reviewed the radiograph findings for **Patient ${study.patient_id}**:\n\n• **Primary Assessment:** **${study.classification?.all_predictions?.[0]?.disease || "Clear"}** (${study.classification?.all_predictions?.[0]?.probability_pct || 0}% confidence)\n• **Visual Localization:** Focus concentrated in the **${study.explainability?.primary_zone_name || "Bilateral Lungs"}**\n• **Heart Size (CTR):** Transverse cardiothoracic ratio is **${study.ctr?.ctr_percentage ?? "--"}%** (${study.ctr?.is_cardiomegaly ? "Cardiomegaly" : "Normal"})\n• **Image Quality:** **${study.iqa?.overall_score != null ? Math.round(study.iqa.overall_score) : "--"}/100** (${study.iqa?.quality_tier || "Diagnostic"})\n\nFeel free to ask any question about this patient's report, findings, heatmaps, or general clinical radiology concepts.`
         : "Hello! I am your **VisionCare Clinical Copilot**.\n\nYou can ask me any general questions about chest radiographs, pulmonary diseases, symptoms, or how AI diagnostic models work.\n\nOnce you upload or select a scan in the **Analyze** tab, I will also have full access to its specific findings, heatmaps, and diagnostic report.",
     },
   ]);
@@ -64,16 +64,22 @@ export const ClinicalChatbot: React.FC<ClinicalChatbotProps> = ({
 
   // When a study is analyzed and injected into an already-open chatbot context
   useEffect(() => {
-    const currentId = study?.study_id || null;
+    if (!study) return;
+    const currentId = study.study_id;
     if (currentId && currentId !== previousStudyIdRef.current) {
       previousStudyIdRef.current = currentId;
-      const topFinding = study?.classification?.all_predictions?.[0]?.disease || "Clear";
-      const topProb = study?.classification?.all_predictions?.[0]?.probability_pct || 0;
+      const topFinding = study.classification?.all_predictions?.[0]?.disease || "Clear";
+      const topProb = study.classification?.all_predictions?.[0]?.probability_pct || 0;
+      const primaryZone = study.explainability?.primary_zone_name || "Bilateral Lungs";
+      const ctrPct = study.ctr?.ctr_percentage ?? "--";
+      const ctrStatus = study.ctr?.is_cardiomegaly ? "Cardiomegaly" : "Normal";
+      const iqaScore = study.iqa?.overall_score ? Math.round(study.iqa.overall_score) : "--";
+
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: `📁 **Radiograph Analysis Loaded for Patient ${study.patient_id}**\n\n• **Primary Assessment:** **${topFinding}** (${topProb}% confidence)\n• **Visual Localization:** Focus in the **${study.explainability.primary_zone_name || "Bilateral Lungs"}**\n• **Heart Size (CTR):** **${study.ctr?.ctr_percentage || "--"}%** (${study.ctr?.is_cardiomegaly ? "Cardiomegaly" : "Normal"})\n• **Image Quality:** **${Math.round(study.iqa.overall_score)}/100**\n\nI now have full telemetry and report data for this radiograph. Feel free to ask about these specific findings, heatmaps, or clinical biometrics!`,
+          content: `📁 **Radiograph Analysis Loaded for Patient ${study.patient_id}**\n\n• **Primary Assessment:** **${topFinding}** (${topProb}% confidence)\n• **Visual Localization:** Focus in the **${primaryZone}**\n• **Heart Size (CTR):** **${ctrPct}%** (${ctrStatus})\n• **Image Quality:** **${iqaScore}/100**\n\nI now have full telemetry and report data for this radiograph. Feel free to ask about these specific findings, heatmaps, or clinical biometrics!`,
         },
       ]);
     }
@@ -101,7 +107,7 @@ export const ClinicalChatbot: React.FC<ClinicalChatbotProps> = ({
         "Review formal ACR Impression & Findings",
         "Why were other differentials ruled out ('Why Not?')",
         `Examine CTR biometrics (${study.ctr?.ctr_percentage || "--"}%) and calipers`,
-        `Inspect Grad-CAM++ regional attribution in the ${study.explainability.primary_zone_name || "lungs"}`,
+        `Inspect Grad-CAM++ regional attribution in the ${study.explainability?.primary_zone_name || "lungs"}`,
         "Review Level 5 counterfactual causal test",
       ]
     : [
