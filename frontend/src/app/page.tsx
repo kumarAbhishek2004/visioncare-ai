@@ -9,6 +9,7 @@ import { ExplainabilityView } from "@/components/ExplainabilityView";
 import { DecisionTraceView } from "@/components/DecisionTraceView";
 import { ClinicalReportView } from "@/components/ClinicalReportView";
 import { ClinicalChatbot } from "@/components/ClinicalChatbot";
+import { MedicalBackgroundAnimation } from "@/components/MedicalBackgroundAnimation";
 import { StudyAnalysisResponse, FindingItem } from "@/types";
 import { analyzeRadiograph } from "@/lib/api";
 import {
@@ -30,7 +31,7 @@ import {
   MessageSquare
 } from "lucide-react";
 
-type MainNavTab = "home" | "analyze" | "chat" | "reports" | "studies" | "about";
+type MainNavTab = "home" | "analyze" | "reports" | "studies" | "about";
 type ResultsTab = "overview" | "explainability" | "trace" | "chat" | "findings" | "technical";
 
 export default function App() {
@@ -231,14 +232,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white relative overflow-x-hidden">
-      {/* Precision Ambient Animated Background Atmosphere */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 bg-dots-subtle opacity-60 animate-grid-float"></div>
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[950px] h-[500px] bg-gradient-to-b from-blue-500/15 via-indigo-400/10 to-transparent blur-3xl rounded-full animate-ambient-drift-1"></div>
-        <div className="absolute top-1/4 -left-40 w-[420px] h-[420px] bg-gradient-to-tr from-cyan-400/12 via-blue-300/8 to-transparent blur-3xl rounded-full animate-ambient-drift-2"></div>
-        <div className="absolute top-1/2 -right-40 w-[440px] h-[440px] bg-gradient-to-bl from-indigo-400/12 via-purple-300/8 to-transparent blur-3xl rounded-full animate-ambient-drift-3"></div>
-        <div className="absolute -bottom-32 left-1/3 w-[600px] h-[350px] bg-gradient-to-t from-blue-400/10 to-transparent blur-3xl rounded-full animate-ambient-drift-1"></div>
-      </div>
+      {/* Dynamic Pulmonary & High-Tech Medical Ambient Moving Animation (Exact match to reference visual) */}
+      <MedicalBackgroundAnimation />
 
       {/* 1. Global Navigation Bar */}
       <div className="relative z-50">
@@ -246,7 +241,6 @@ export default function App() {
           activeNav={activeNav}
           onNavChange={(nav) => setActiveNav(nav)}
           hasStudy={!!study}
-          onOpenChat={() => setIsFloatingChatOpen(true)}
         />
       </div>
 
@@ -290,21 +284,10 @@ export default function App() {
         {activeNav === "home" && (
           <HomePage
             onGetStarted={() => setActiveNav("analyze")}
-            onOpenChat={() => setIsFloatingChatOpen(true)}
           />
         )}
 
-        {/* Page 2: Dedicated AI Copilot Full-Page View */}
-        {activeNav === "chat" && (
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in space-y-4">
-            <ClinicalChatbot
-              study={study}
-              onBackToOverview={() => setActiveNav(study ? "analyze" : "home")}
-            />
-          </div>
-        )}
-
-        {/* Page 3: Analyze (Upload -> Results) */}
+        {/* Page 2: Analyze (Upload -> Results) */}
         {activeNav === "analyze" && (
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
             {!study ? (
@@ -313,7 +296,6 @@ export default function App() {
                 onUpload={handleFileUpload}
                 onSelectSample={handleSelectSample}
                 isLoading={isLoading}
-                onOpenChat={() => setIsFloatingChatOpen(true)}
               />
             ) : (
               // Results Presentation with Sub-Tabs
@@ -835,11 +817,11 @@ export default function App() {
         <button
           onClick={() => setIsFloatingChatOpen(true)}
           className="fixed bottom-6 right-6 z-40 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold px-4 py-3 rounded-full shadow-xl shadow-blue-500/25 flex items-center space-x-2.5 transition hover:scale-105 active:scale-95 cursor-pointer border border-white/20 animate-fade-in group"
-          title="Ask AI Clinical Copilot (Available with or without radiograph)"
+          title="AI Clinical Copilot"
         >
           <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
           <MessageSquare className="w-4 h-4" />
-          <span>{study ? `Study Copilot (${study.patient_id})` : "Ask AI Copilot"}</span>
+          <span>{study ? `AI Copilot (${study.patient_id})` : "AI Copilot"}</span>
         </button>
       )}
 

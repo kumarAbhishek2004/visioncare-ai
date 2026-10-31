@@ -1,20 +1,18 @@
 "use client";
 
 import React from "react";
-import { Activity, MessageSquare } from "lucide-react";
+import { Activity } from "lucide-react";
 
 interface NavbarProps {
-  activeNav: "home" | "analyze" | "chat" | "reports" | "studies" | "about";
-  onNavChange: (nav: "home" | "analyze" | "chat" | "reports" | "studies" | "about") => void;
+  activeNav: "home" | "analyze" | "reports" | "studies" | "about";
+  onNavChange: (nav: "home" | "analyze" | "reports" | "studies" | "about") => void;
   hasStudy: boolean;
-  onOpenChat?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   activeNav,
   onNavChange,
   hasStudy,
-  onOpenChat,
 }) => {
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
@@ -57,17 +55,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             Analyze
           </button>
           <button
-            onClick={() => onNavChange("chat")}
-            className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition flex items-center gap-1.5 ${
-              activeNav === "chat"
-                ? "text-blue-600 font-semibold border-b-2 border-blue-600 rounded-b-none pb-2"
-                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-            }`}
-          >
-            <MessageSquare className="w-3.5 h-3.5 text-blue-600" />
-            <span>AI Copilot</span>
-          </button>
-          <button
             onClick={() => onNavChange("reports")}
             className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition ${
               activeNav === "reports"
@@ -98,19 +85,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             About
           </button>
         </nav>
-
-        {/* Right: Quick Action Chatbot Trigger */}
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={onOpenChat}
-            className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 text-blue-700 font-semibold text-xs px-3.5 py-2 rounded-xl border border-blue-200 shadow-xs hover:shadow transition cursor-pointer"
-            title="Ask AI Copilot anytime without uploading an X-ray"
-          >
-            <MessageSquare className="w-3.5 h-3.5 text-blue-600" />
-            <span>Ask AI Copilot</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          </button>
-        </div>
       </div>
     </header>
   );
