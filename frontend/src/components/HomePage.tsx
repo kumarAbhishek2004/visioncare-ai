@@ -15,14 +15,16 @@ import {
   Zap,
   CheckCircle2,
   ChevronRight,
-  Layers
+  Layers,
+  MessageSquare
 } from "lucide-react";
 
 interface HomePageProps {
   onGetStarted: () => void;
+  onOpenChat?: () => void;
 }
 
-export const HomePage: React.FC<HomePageProps> = ({ onGetStarted }) => {
+export const HomePage: React.FC<HomePageProps> = ({ onGetStarted, onOpenChat }) => {
   const [selectedCondition, setSelectedCondition] = useState<
     "normal" | "pneumonia" | "effusion" | "cardiomegaly" | "pneumothorax"
   >("pneumonia");
@@ -106,6 +108,17 @@ export const HomePage: React.FC<HomePageProps> = ({ onGetStarted }) => {
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
 
+            {onOpenChat && (
+              <button
+                onClick={onOpenChat}
+                className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 text-blue-700 font-semibold text-sm px-5 py-3.5 rounded-2xl border border-blue-200/90 shadow-xs hover:border-blue-300 hover:shadow-sm transition-all duration-200 cursor-pointer"
+              >
+                <MessageSquare className="w-4 h-4 text-blue-600" />
+                <span>Ask AI Copilot</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              </button>
+            )}
+
             <button
               onClick={() => {
                 document.getElementById("clinical-reference-guide")?.scrollIntoView({ behavior: "smooth" });
@@ -125,7 +138,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onGetStarted }) => {
                 <Activity className="w-3.5 h-3.5" />
               </div>
               <p className="text-lg font-extrabold text-slate-900 mt-1">14 Targets</p>
-              <p className="text-[10px] text-slate-500">DenseNet-121 Multi-Label</p>
+              <p className="text-[10px] text-slate-500">Multi-Label Neural Model</p>
             </div>
 
             <div className="card-surface card-surface-hover p-3 rounded-2xl group cursor-default">
@@ -181,18 +194,13 @@ export const HomePage: React.FC<HomePageProps> = ({ onGetStarted }) => {
                 <span>Live Workstation</span>
               </div>
 
-              {/* Floating Accuracy Metric Badge (Top-Right) */}
-              <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-slate-900/80 backdrop-blur-md border border-white/10 text-cyan-300 text-[10px] font-mono font-semibold shadow-lg z-10">
-                AUROC: 0.923
-              </div>
-
               {/* Bottom Telemetry Overlay Bar */}
               <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between p-2.5 rounded-xl bg-slate-900/90 backdrop-blur-md border border-white/15 text-white shadow-xl z-10 transition-all duration-300 group-hover:bg-slate-900/95">
                 <div className="flex items-center space-x-2">
                   <Activity className="w-4 h-4 text-blue-400 shrink-0" />
                   <div className="text-left">
-                    <p className="text-[11px] font-semibold text-slate-100 leading-tight">DenseNet-121 Multi-Label</p>
-                    <p className="text-[9px] text-slate-400">14 Thoracic Pathologies + TTA</p>
+                    <p className="text-[11px] font-semibold text-slate-100 leading-tight">Thoracic AI Analysis</p>
+                    <p className="text-[9px] text-slate-400">14 Thoracic Pathologies</p>
                   </div>
                 </div>
                 <span className="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-500/30">
@@ -202,6 +210,39 @@ export const HomePage: React.FC<HomePageProps> = ({ onGetStarted }) => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Interactive AI Copilot Callout Banner (Available Without Upload) */}
+      <div className="card-surface p-6 rounded-3xl border border-blue-200/90 bg-gradient-to-r from-blue-50/70 via-indigo-50/50 to-white shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-start space-x-4">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-blue-500/25 shrink-0">
+            <MessageSquare className="w-6 h-6" />
+          </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-base font-bold text-slate-900">
+                Radiology AI Clinical Copilot — Available 24/7
+              </h3>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-xs">
+                No Scan Upload Needed
+              </span>
+            </div>
+            <p className="text-xs text-slate-600 mt-1 max-w-2xl leading-relaxed">
+              Have questions about chest radiographs, pneumonia symptoms, cardiomegaly (heart size), or how AI explainability works? 
+              Chat with our copilot directly in <strong>Doctor Mode</strong> (formal ACR terminology) or <strong>Patient Mode</strong> (plain everyday language).
+            </p>
+          </div>
+        </div>
+        {onOpenChat && (
+          <button
+            onClick={onOpenChat}
+            className="inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-5 py-3 rounded-2xl shadow-md shadow-blue-500/20 hover:shadow-blue-500/30 transition shrink-0 cursor-pointer"
+          >
+            <MessageSquare className="w-4 h-4" />
+            <span>Launch Chatbot</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
       {/* 2. Six Interactive Moving Feature Cards Row */}
@@ -251,7 +292,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onGetStarted }) => {
             </div>
             <div>
               <span className="text-xs font-bold text-slate-800 block">14 Diseases</span>
-              <span className="text-[10px] text-slate-500">DenseNet-121</span>
+              <span className="text-[10px] text-slate-500">Multi-Label Neural</span>
             </div>
           </div>
 

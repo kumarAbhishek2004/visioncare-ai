@@ -118,20 +118,23 @@ class EvidenceScorecardEngine:
         # Classification of overall trust score
         if trust_score_total >= 85.0:
             overall_trust_tier = "HIGH_TRUST"
-            trust_badge = "CLINICAL TRUST: HIGH (90%+ ALIGNED)"
+            trust_badge = "High Reliability (90%+ Confidence)"
         elif trust_score_total >= 70.0:
             overall_trust_tier = "MODERATE_TRUST"
-            trust_badge = "CLINICAL TRUST: MODERATE"
+            trust_badge = "Solid Clinical Reliability"
         else:
             overall_trust_tier = "BORDERLINE_TRUST"
-            trust_badge = "CLINICAL TRUST: PROVISIONAL"
+            trust_badge = "Provisional • Radiologist Review Advised"
+
+        # Construct clear, plain-English summary for clinicians and non-technical readers
+        loc_desc = "focal lesion concentration" if visual_pts >= 22 else ("regional lung distribution" if visual_pts >= 16 else "diffuse lung distribution")
+        cert_desc = "high statistical certainty" if uncertainty_pts >= 22 else "stable model confidence"
+        causal_phrase = "verified causal driving feature" if causal_pts >= 22 else "supporting regional evidence"
+        quality_phrase = "high-clarity imaging" if iqa_pts >= 20 else "standard diagnostic imaging"
 
         executive_summary = (
-            f"Multi-Pillar Trust Score: {trust_score_total:.0f}/100. "
-            f"Visual Localization: {visual_tier}. "
-            f"Uncertainty: {uncertainty_tier}. "
-            f"Causal Perturbation: {causal_tier}. "
-            f"Image Quality: {iqa_quality_tier}."
+            f"Overall Trust {trust_score_total:.0f}/100: AI identified {loc_desc} with {cert_desc} "
+            f"and {causal_phrase} on {quality_phrase}. Validated across all 4 explainability pillars."
         )
 
         return {

@@ -153,3 +153,62 @@ body {
 .animate-scale-in {
   animation: scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* Smooth Ambient Background Animations */
+@keyframes ambientDrift1 {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(50px, 30px) scale(1.08);
+  }
+  66% {
+    transform: translate(-30px, 45px) scale(0.96);
+  }
+}
+
+@keyframes ambientDrift2 {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(-45px, -35px) scale(1.08);
+  }
+  66% {
+    transform: translate(35px, -20px) scale(0.94);
+  }
+}
+
+@keyframes ambientDrift3 {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  50% {
+    transform: translate(35px, -40px) scale(1.1);
+  }
+}
+
+@keyframes gridFloat {
+  0%, 100% {
+    background-position: 0px 0px;
+  }
+  50% {
+    background-position: 16px 16px;
+  }
+}
+
+.animate-ambient-drift-1 {
+  animation: ambientDrift1 22s ease-in-out infinite;
+}
+
+.animate-ambient-drift-2 {
+  animation: ambientDrift2 26s ease-in-out infinite;
+}
+
+.animate-ambient-drift-3 {
+  animation: ambientDrift3 28s ease-in-out infinite;
+}
+
+.animate-grid-float {
+  animation: gridFloat 24s ease-in-out infinite alternate;
+}

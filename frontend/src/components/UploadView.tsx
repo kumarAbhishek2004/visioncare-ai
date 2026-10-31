@@ -5,19 +5,23 @@ import {
   UploadCloud,
   CheckCircle2,
   FileText,
-  Info
+  Info,
+  MessageSquare,
+  ArrowRight
 } from "lucide-react";
 
 interface UploadViewProps {
   onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSelectSample: (type: "normal" | "pneumonia" | "effusion" | "cardiomegaly" | "pneumothorax") => void;
   isLoading: boolean;
+  onOpenChat?: () => void;
 }
 
 export const UploadView: React.FC<UploadViewProps> = ({
   onUpload,
   onSelectSample,
   isLoading,
+  onOpenChat,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
 
@@ -74,13 +78,27 @@ export const UploadView: React.FC<UploadViewProps> = ({
       </div>
 
       {/* 2. Page Header */}
-      <div className="space-y-1">
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-          Upload Chest X-ray
-        </h2>
-        <p className="text-sm text-slate-500">
-          Upload a frontal chest radiograph to get AI-assisted analysis.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="space-y-1">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            Upload Chest X-ray
+          </h2>
+          <p className="text-sm text-slate-500">
+            Upload a frontal chest radiograph to get AI-assisted analysis.
+          </p>
+        </div>
+
+        {onOpenChat && (
+          <button
+            onClick={onOpenChat}
+            className="inline-flex items-center space-x-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold px-4 py-2.5 rounded-xl border border-blue-200 shadow-xs hover:shadow transition self-start sm:self-auto cursor-pointer"
+            title="Ask questions before uploading"
+          >
+            <MessageSquare className="w-4 h-4 text-blue-600" />
+            <span>Ask AI Copilot First</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          </button>
+        )}
       </div>
 
       {/* 3. Main Upload Area & Tips Card */}

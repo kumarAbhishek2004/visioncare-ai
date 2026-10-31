@@ -11,9 +11,7 @@ import {
   Check,
   X,
   ArrowLeft,
-  ChevronDown,
-  Cpu,
-  Minimize2
+  ChevronDown
 } from "lucide-react";
 import { StudyAnalysisResponse } from "@/types";
 import { sendChatMessage, getChatProviders, ChatMessageItem } from "@/lib/api";
@@ -35,8 +33,8 @@ export const ClinicalChatbot: React.FC<ClinicalChatbotProps> = ({
     {
       role: "assistant",
       content: study
-        ? `Hello, I'm your **VisionCare AI Clinical Copilot**. I have loaded all telemetry from **Study ${study.patient_id}**, including:\n\n• **14-Disease Predictions:** Primary finding is **${study.classification.all_predictions?.[0]?.disease || "Clear"}** (${study.classification.all_predictions?.[0]?.probability_pct || 0}% confidence).\n• **Grad-CAM++ Attribution:** Primary zone concentration in **${study.explainability.primary_zone_name || "Bilateral Lungs"}**.\n• **CTR Biometrics:** Transverse ratio is **${study.ctr?.ctr_percentage || "--"}%** (${study.ctr?.is_cardiomegaly ? "Cardiomegaly" : "Normal"}).\n• **Image Quality Score:** **${Math.round(study.iqa.overall_score)}/100** (${study.iqa.quality_tier}).\n\nHow can I help you analyze this radiograph?`
-        : "Hello! Upload or select a chest X-ray in the Analyze section, and I will be fully grounded in its findings, explainability heatmaps, CTR biometrics, and report impressions.",
+        ? `Hello! I am your **VisionCare Clinical Copilot**. I have reviewed the radiograph findings for **Patient ${study.patient_id}**:\n\n• **Primary Assessment:** **${study.classification.all_predictions?.[0]?.disease || "Clear"}** (${study.classification.all_predictions?.[0]?.probability_pct || 0}% confidence)\n• **Visual Localization:** Focus concentrated in the **${study.explainability.primary_zone_name || "Bilateral Lungs"}**\n• **Heart Size (CTR):** Transverse cardiothoracic ratio is **${study.ctr?.ctr_percentage || "--"}%** (${study.ctr?.is_cardiomegaly ? "Cardiomegaly" : "Normal"})\n• **Image Quality:** **${Math.round(study.iqa.overall_score)}/100** (${study.iqa.quality_tier})\n\nFeel free to ask any question about this patient's report, findings, heatmaps, or general clinical radiology concepts.`
+        : "Hello! I am your **VisionCare Clinical Copilot**.\n\nYou can ask me any general questions about chest radiographs, pulmonary diseases, symptoms, or how AI diagnostic models work.\n\nOnce you upload or select a scan in the **Analyze** tab, I will also have full access to its specific findings, heatmaps, and diagnostic report.",
     },
   ]);
 
@@ -53,6 +51,7 @@ export const ClinicalChatbot: React.FC<ClinicalChatbotProps> = ({
   });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const previousStudyIdRef = useRef<string | null>(study?.study_id || null);
 
   // Auto-scroll to bottom of messages
   const scrollToBottom = () => {
@@ -62,6 +61,23 @@ export const ClinicalChatbot: React.FC<ClinicalChatbotProps> = ({
   useEffect(() => {
     scrollToBottom();
   }, [messages, isLoading]);
+
+  // When a study is analyzed and injected into an already-open chatbot context
+  useEffect(() => {
+    const currentId = study?.study_id || null;
+    if (currentId && currentId !== previousStudyIdRef.current) {
+      previousStudyIdRef.current = currentId;
+      const topFinding = study?.classification?.all_predictions?.[0]?.disease || "Clear";
+      const topProb = study?.classification?.all_predictions?.[0]?.probability_pct || 0;
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: `📁 **Radiograph Analysis Loaded for Patient ${study.patient_id}**\n\n• **Primary Assessment:** **${topFinding}** (${topProb}% confidence)\n• **Visual Localization:** Focus in the **${study.explainability.primary_zone_name || "Bilateral Lungs"}**\n• **Heart Size (CTR):** **${study.ctr?.ctr_percentage || "--"}%** (${study.ctr?.is_cardiomegaly ? "Cardiomegaly" : "Normal"})\n• **Image Quality:** **${Math.round(study.iqa.overall_score)}/100**\n\nI now have full telemetry and report data for this radiograph. Feel free to ask about these specific findings, heatmaps, or clinical biometrics!`,
+        },
+      ]);
+    }
+  }, [study]);
 
   // Check available backend LLM providers on mount
   useEffect(() => {
@@ -79,21 +95,63 @@ export const ClinicalChatbot: React.FC<ClinicalChatbotProps> = ({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isFloating, onClose]);
 
-  // Smart suggestions based on study
-  const suggestions = study
+  // Persona-tailored suggestions (Doctor vs Patient)
+  const clinicalSuggestions = study
     ? [
-        study.ctr?.is_cardiomegaly
-          ? `Why is the CTR (${study.ctr.ctr_percentage}%) flagged as Cardiomegaly?`
-          : "What is the Cardiothoracic Ratio (CTR) on this scan?",
-        `What does the heatmap show in the ${study.explainability.primary_zone_name || "lungs"}?`,
-        "Explain this scan in simple terms for the patient",
-        "What follow-up tests are recommended?",
+        "Review formal ACR Impression & Findings",
+        "Why were other differentials ruled out ('Why Not?')",
+        `Examine CTR biometrics (${study.ctr?.ctr_percentage || "--"}%) and calipers`,
+        `Inspect Grad-CAM++ regional attribution in the ${study.explainability.primary_zone_name || "lungs"}`,
+        "Review Level 5 counterfactual causal test",
       ]
     : [
-        "What 14 conditions does VisionCare AI evaluate?",
-        "How does Grad-CAM++ visual explainability work?",
+        "What are the diagnostic thresholds for the 14 conditions?",
         "How is the Cardiothoracic Ratio (CTR) measured?",
+        "What does Grad-CAM++ feature attribution signify in radiology?",
+        "How do radiologists differentiate pneumonia from effusion?",
       ];
+
+  const patientSuggestions = study
+    ? [
+        "Can you explain my X-ray results in simple everyday words?",
+        "Do I have any signs of pneumonia, fluid, or lung problems?",
+        `Is my heart size normal or should I be worried? (CTR: ${study.ctr?.ctr_percentage || "--"}%)`,
+        "What important questions should I ask my doctor about this report?",
+        "What does the colored heatmap mean on my chest scan?",
+      ]
+    : [
+        "What is pneumonia and how does a chest X-ray detect it?",
+        "What is an enlarged heart and what causes it?",
+        "How safe is a chest X-ray and how does it work?",
+        "What are common symptoms of fluid around the lungs (effusion)?",
+      ];
+
+  const [activeSuggestions, setActiveSuggestions] = useState<string[]>(
+    mode === "patient" ? patientSuggestions : clinicalSuggestions
+  );
+
+  // Synchronize suggestions whenever mode or study context changes
+  useEffect(() => {
+    setActiveSuggestions(mode === "patient" ? patientSuggestions : clinicalSuggestions);
+  }, [mode, study]);
+
+  const handleModeChange = (newMode: "clinical" | "patient") => {
+    if (newMode === mode) return;
+    setMode(newMode);
+    setActiveSuggestions(newMode === "patient" ? patientSuggestions : clinicalSuggestions);
+
+    // Visible confirmation message in chat so the user immediately sees the change!
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "assistant",
+        content:
+          newMode === "patient"
+            ? "👤 **Patient Mode Activated**\n\nI will now explain all findings in simple, easy-to-understand language with no complex medical jargon.\n\nClick any of the suggested questions below or ask anything about your scan!"
+            : "🩺 **Doctor Mode Activated**\n\nClinical Decision Support active. I will now use formal ACR radiology terminology, calibrated multi-label probabilities, differential exclusions, and quantitative biometrics.",
+      },
+    ]);
+  };
 
   const handleSendMessage = async (textToSend?: string) => {
     const text = textToSend || inputMessage;
@@ -116,6 +174,10 @@ export const ClinicalChatbot: React.FC<ClinicalChatbotProps> = ({
 
       setActiveModelLabel(res.model_name || res.source);
 
+      if (res.suggested_questions && res.suggested_questions.length > 0) {
+        setActiveSuggestions(res.suggested_questions);
+      }
+
       setMessages((prev) => [
         ...prev,
         {
@@ -128,7 +190,7 @@ export const ClinicalChatbot: React.FC<ClinicalChatbotProps> = ({
         ...prev,
         {
           role: "assistant",
-          content: `⚠️ **Error communicating with assistant:** ${err.message || "Failed to process question."}\n\nPlease try again or switch to Clinical CDS mode.`,
+          content: `Unable to connect to assistant: ${err.message || "Failed to process question."}\n\nPlease try again or switch to Clinical CDS mode.`,
         },
       ]);
     } finally {
@@ -147,10 +209,42 @@ export const ClinicalChatbot: React.FC<ClinicalChatbotProps> = ({
       {
         role: "assistant",
         content: study
-          ? `Conversation reset. Ready to answer questions on **Study ${study.patient_id}** and its explainability telemetry.`
-          : "Conversation reset. Ready to answer questions on chest radiography and AI explainability.",
+          ? `Conversation reset. Ready to answer questions on **Patient ${study.patient_id}** and its diagnostic findings.`
+          : "Conversation reset. Ready to answer questions on chest radiography, thoracic medicine, and AI explainability.",
       },
     ]);
+  };
+
+  /**
+   * Parses markdown inline styling, converting **bold** to <strong> tags
+   * and stripping any raw unrendered asterisks.
+   */
+  const renderFormattedLine = (lineText: string, isUser: boolean = false) => {
+    // Regex splits by **bold text**
+    const parts = lineText.split(/(\*\*[^*]+\*\*)/g);
+
+    return parts.map((part, index) => {
+      if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
+        return (
+          <strong key={index} className={`font-bold ${isUser ? "text-white" : "text-slate-900"}`}>
+            {part.slice(2, -2)}
+          </strong>
+        );
+      }
+
+      // Check for *italic* if present
+      if (part.startsWith("*") && part.endsWith("*") && part.length > 2) {
+        return (
+          <em key={index} className={`italic ${isUser ? "text-blue-100" : "text-slate-700"}`}>
+            {part.slice(1, -1)}
+          </em>
+        );
+      }
+
+      // Strip any stray unclosed double asterisks
+      const clean = part.replace(/\*\*/g, "");
+      return <span key={index}>{clean}</span>;
+    });
   };
 
   return (
@@ -166,12 +260,12 @@ export const ClinicalChatbot: React.FC<ClinicalChatbotProps> = ({
       <div
         className={`card-surface flex flex-col overflow-hidden bg-white ${
           isFloating
-            ? "fixed bottom-5 right-5 w-[94vw] sm:w-[480px] h-[670px] max-h-[88vh] rounded-3xl shadow-2xl z-50 border-2 border-blue-500/40 animate-scale-in"
+            ? "fixed bottom-5 right-5 w-[94vw] sm:w-[490px] h-[670px] max-h-[88vh] rounded-3xl shadow-2xl z-50 border-2 border-blue-500/40 animate-scale-in"
             : "w-full rounded-3xl shadow-sm border border-slate-200 min-h-[660px]"
         }`}
       >
-        {/* 1. Chat Header */}
-        <div className="p-3.5 sm:p-4 bg-white border-b border-slate-200 flex items-center justify-between gap-3 shrink-0">
+        {/* 1. Chat Header (Clean layout without overlapping telemetry pills) */}
+        <div className="p-3.5 sm:p-4 bg-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 shrink-0">
           <div className="flex items-center space-x-3 min-w-0">
             {/* If tabbed view, show Back Button */}
             {!isFloating && onBackToOverview && (
@@ -189,29 +283,23 @@ export const ClinicalChatbot: React.FC<ClinicalChatbotProps> = ({
             </div>
 
             <div className="min-w-0">
-              <div className="flex items-center space-x-2">
-                <h3 className="text-sm font-bold text-slate-900 tracking-tight truncate">
-                  Clinical Copilot
-                </h3>
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 animate-pulse"></span>
-                  Telemetry Active
-                </span>
-              </div>
+              <h3 className="text-sm font-bold text-slate-900 tracking-tight truncate">
+                Clinical Copilot
+              </h3>
               <p className="text-[11px] text-slate-500 truncate">
-                {study ? `Study ${study.patient_id} • ${activeModelLabel}` : "Ready for questions"}
+                {study ? `Patient ${study.patient_id} • ${activeModelLabel}` : "General Radiology & Medical Doubts"}
               </p>
             </div>
           </div>
 
           {/* Action Controls */}
-          <div className="flex items-center space-x-1.5 shrink-0">
+          <div className="flex items-center space-x-2 shrink-0">
             {/* Model Selector Dropdown */}
             <div className="relative">
               <select
                 value={preferredModel}
                 onChange={(e) => setPreferredModel(e.target.value as any)}
-                className="text-[10px] font-semibold bg-slate-100 hover:bg-slate-200/80 text-slate-700 py-1.5 pl-2 pr-6 rounded-xl border border-slate-200 appearance-none focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                className="text-[10px] font-semibold bg-slate-100 hover:bg-slate-200/80 text-slate-700 py-1.5 pl-2.5 pr-6 rounded-xl border border-slate-200 appearance-none focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
                 title="Select AI Model Engine"
               >
                 <option value="auto">Auto (Best Available)</option>
@@ -226,61 +314,97 @@ export const ClinicalChatbot: React.FC<ClinicalChatbotProps> = ({
             {/* Tone Toggle (Doctor vs Patient) */}
             <div className="bg-slate-100 p-0.5 rounded-xl border border-slate-200 flex items-center text-[10px] font-semibold">
               <button
-                onClick={() => setMode("clinical")}
-                className={`px-2 py-1 rounded-lg transition ${
+                onClick={() => handleModeChange("clinical")}
+                className={`px-2.5 py-1 rounded-lg transition cursor-pointer flex items-center gap-1 ${
                   mode === "clinical"
-                    ? "bg-white text-blue-700 shadow-sm font-bold"
+                    ? "bg-blue-600 text-white shadow-xs font-bold"
                     : "text-slate-600 hover:text-slate-900"
                 }`}
-                title="Clinical Mode: Exact probabilities, anatomical zones, and medical biometrics"
+                title="Doctor Mode: Clinical terminology, calibrated probabilities, and biometrics"
               >
-                Doctor
+                <span>🩺</span>
+                <span>Doctor</span>
               </button>
               <button
-                onClick={() => setMode("patient")}
-                className={`px-2 py-1 rounded-lg transition ${
+                onClick={() => handleModeChange("patient")}
+                className={`px-2.5 py-1 rounded-lg transition cursor-pointer flex items-center gap-1 ${
                   mode === "patient"
-                    ? "bg-white text-blue-700 shadow-sm font-bold"
+                    ? "bg-emerald-600 text-white shadow-xs font-bold"
                     : "text-slate-600 hover:text-slate-900"
                 }`}
-                title="Patient Mode: Clear, simple, non-jargon explanations"
+                title="Patient Mode: Clear, friendly, non-jargon explanations"
               >
-                Patient
+                <span>👤</span>
+                <span>Patient</span>
               </button>
             </div>
 
             {/* Reset Chat button */}
             <button
               onClick={handleResetChat}
-              className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 border border-slate-200 transition"
+              className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 border border-slate-200 transition cursor-pointer"
               title="Reset conversation"
             >
               <RotateCcw className="w-3.5 h-3.5" />
             </button>
 
-            {/* Prominent Close / Cut Down Button (Floating Mode) */}
+            {/* Prominent Close Button (Floating Mode) */}
             {isFloating && onClose && (
               <button
                 onClick={onClose}
-                className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-slate-600 flex items-center justify-center border border-slate-200 transition cursor-pointer shadow-sm group"
+                className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-slate-600 flex items-center justify-center border border-slate-200 transition cursor-pointer shadow-xs group"
                 title="Close Assistant (Esc)"
               >
                 <X className="w-4 h-4 group-hover:scale-110 transition-transform" />
               </button>
             )}
 
-            {/* Close / Return Button (Tabbed Full-Page Mode) */}
+            {/* Close Button (Tabbed Full-Page Mode) */}
             {!isFloating && onBackToOverview && (
               <button
                 onClick={onBackToOverview}
                 className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold border border-slate-200 transition cursor-pointer"
-                title="Cut down and return to Overview"
+                title="Return to Overview"
               >
                 <X className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Close</span>
               </button>
             )}
           </div>
+        </div>
+
+        {/* Active Persona Notification Banner */}
+        <div
+          className={`px-4 py-2 text-xs flex items-center justify-between border-b transition-colors shrink-0 ${
+            mode === "patient"
+              ? "bg-emerald-50/80 border-emerald-200/70 text-emerald-900"
+              : "bg-blue-50/80 border-blue-200/70 text-blue-900"
+          }`}
+        >
+          <div className="flex items-center space-x-2">
+            <span
+              className={`w-2 h-2 rounded-full ${
+                mode === "patient" ? "bg-emerald-500 animate-pulse" : "bg-blue-600"
+              }`}
+            />
+            <span className="font-bold">
+              {mode === "patient" ? "👤 Patient Mode Active" : "🩺 Doctor Mode Active"}
+            </span>
+            <span className="text-[11px] opacity-80 hidden sm:inline">
+              {mode === "patient"
+                ? "— Plain language, reassuring analogies & questions for your doctor"
+                : "— ACR clinical terminology, calibrated probabilities & CTR biometrics"}
+            </span>
+          </div>
+          <span
+            className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shadow-xs ${
+              mode === "patient"
+                ? "bg-white text-emerald-800 border-emerald-300"
+                : "bg-white text-blue-800 border-blue-300"
+            }`}
+          >
+            {mode === "patient" ? "Everyday Language" : "Clinical CDS"}
+          </span>
         </div>
 
         {/* 2. Messages Stream */}
@@ -294,7 +418,7 @@ export const ClinicalChatbot: React.FC<ClinicalChatbotProps> = ({
             >
               {/* Avatar */}
               <div
-                className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${
+                className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-xs ${
                   msg.role === "user"
                     ? "bg-slate-900 text-white"
                     : "bg-blue-600 text-white shadow-blue-500/20"
@@ -309,17 +433,17 @@ export const ClinicalChatbot: React.FC<ClinicalChatbotProps> = ({
 
               {/* Message Bubble */}
               <div
-                className={`relative group max-w-[85%] rounded-2xl p-4 text-xs leading-relaxed space-y-2 shadow-sm ${
+                className={`relative group max-w-[85%] rounded-2xl p-4 text-xs leading-relaxed space-y-2 shadow-xs ${
                   msg.role === "user"
                     ? "bg-blue-600 text-white font-medium rounded-tr-none shadow-blue-500/10"
-                    : "bg-white text-slate-800 border border-slate-200/90 rounded-tl-none shadow-sm"
+                    : "bg-white text-slate-800 border border-slate-200/90 rounded-tl-none shadow-xs"
                 }`}
               >
                 {/* Copy action */}
                 {msg.role === "assistant" && (
                   <button
                     onClick={() => handleCopy(msg.content, idx)}
-                    className="absolute top-2.5 right-2.5 opacity-0 group-hover:opacity-100 text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 transition"
+                    className="absolute top-2.5 right-2.5 opacity-0 group-hover:opacity-100 text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 transition cursor-pointer"
                     title="Copy message"
                   >
                     {copiedIndex === idx ? (
@@ -330,27 +454,52 @@ export const ClinicalChatbot: React.FC<ClinicalChatbotProps> = ({
                   </button>
                 )}
 
-                {/* Render formatted message content */}
-                <div className="whitespace-pre-wrap font-sans space-y-1">
+                {/* Render clean formatted message content without raw asterisks */}
+                <div className="space-y-1.5 font-sans">
                   {msg.content.split("\n").map((line, i) => {
-                    if (line.startsWith("### ")) {
+                    const trimmed = line.trim();
+
+                    // Section Heading: ### Heading or ## Heading
+                    if (trimmed.startsWith("### ") || trimmed.startsWith("## ")) {
+                      const headingText = trimmed.replace(/^#+\s*/, "");
                       return (
-                        <h4 key={i} className="font-bold text-sm text-slate-900 pt-1 pb-0.5 border-b border-slate-100 mb-1">
-                          {line.replace("### ", "")}
+                        <h4
+                          key={i}
+                          className="font-bold text-sm text-slate-900 pt-1.5 pb-0.5 border-b border-slate-100 mb-1"
+                        >
+                          {renderFormattedLine(headingText)}
                         </h4>
                       );
                     }
-                    if (line.startsWith("• ") || line.startsWith("- ")) {
+
+                    // Bullet item: • or - or *
+                    if (trimmed.startsWith("• ") || trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+                      const bulletText = trimmed.replace(/^[•\-*]\s*/, "");
                       return (
-                        <div key={i} className="flex items-start space-x-1.5 pl-0.5">
-                          <span className="text-blue-500 font-bold shrink-0 mt-0.5">•</span>
-                          <span>{line.substring(2)}</span>
+                        <div key={i} className="flex items-start space-x-2 pl-0.5 py-0.5">
+                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 mt-1.5 ${
+                            msg.role === "user" ? "bg-white" : "bg-blue-600"
+                          }`}></span>
+                          <div className={`leading-relaxed ${
+                            msg.role === "user" ? "text-white" : "text-slate-700"
+                          }`}>
+                            {renderFormattedLine(bulletText, msg.role === "user")}
+                          </div>
                         </div>
                       );
                     }
+
+                    // Blank line spacing
+                    if (trimmed === "") {
+                      return <div key={i} className="h-1" />;
+                    }
+
+                    // Normal paragraph
                     return (
-                      <p key={i} className={line === "" ? "h-1.5" : "leading-relaxed"}>
-                        {line}
+                      <p key={i} className={`leading-relaxed ${
+                        msg.role === "user" ? "text-white font-medium" : "text-slate-700"
+                      }`}>
+                        {renderFormattedLine(line, msg.role === "user")}
                       </p>
                     );
                   })}
@@ -362,17 +511,17 @@ export const ClinicalChatbot: React.FC<ClinicalChatbotProps> = ({
           {/* Loading indicator */}
           {isLoading && (
             <div className="flex items-start gap-3 animate-fade-in">
-              <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-blue-500/20">
+              <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs shadow-blue-500/20">
                 <Activity className="w-4 h-4" />
               </div>
-              <div className="bg-white border border-slate-200 rounded-2xl rounded-tl-none p-4 shadow-sm space-y-1.5">
+              <div className="bg-white border border-slate-200 rounded-2xl rounded-tl-none p-4 shadow-xs space-y-1.5">
                 <div className="flex items-center space-x-1.5">
                   <span className="w-2 h-2 rounded-full bg-blue-600 animate-bounce"></span>
                   <span className="w-2 h-2 rounded-full bg-blue-400 animate-bounce [animation-delay:0.2s]"></span>
                   <span className="w-2 h-2 rounded-full bg-blue-200 animate-bounce [animation-delay:0.4s]"></span>
                 </div>
                 <span className="text-[10px] text-slate-400 font-medium block">
-                  Synthesizing clinical radiograph telemetry...
+                  Reviewing radiograph findings and report...
                 </span>
               </div>
             </div>
@@ -387,7 +536,7 @@ export const ClinicalChatbot: React.FC<ClinicalChatbotProps> = ({
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1">
             Suggested:
           </span>
-          {suggestions.map((q, idx) => (
+          {activeSuggestions.map((q, idx) => (
             <button
               key={idx}
               onClick={() => handleSendMessage(q)}
@@ -413,7 +562,7 @@ export const ClinicalChatbot: React.FC<ClinicalChatbotProps> = ({
             onChange={(e) => setInputMessage(e.target.value)}
             placeholder={
               mode === "clinical"
-                ? "Ask about zones, heatmaps, CTR calipers, differential thresholds..."
+                ? "Ask about the report, findings, zones, CTR calipers, or general doubts..."
                 : "Ask any question about this X-ray in plain language..."
             }
             disabled={isLoading}

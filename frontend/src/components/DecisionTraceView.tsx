@@ -45,7 +45,7 @@ export const DecisionTraceView: React.FC<DecisionTraceViewProps> = ({ study }) =
       num: 5,
       title: "AI Disease Prediction",
       time: "10:24:15 AM",
-      desc: "Evaluated 14 cardiopulmonary classes via DenseNet-121 with temperature scaling calibration.",
+      desc: "Evaluated 14 cardiopulmonary classes via calibrated multi-label neural network.",
       status: "Passed",
     },
     {

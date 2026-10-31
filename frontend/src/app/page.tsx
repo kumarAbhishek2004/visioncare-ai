@@ -30,7 +30,7 @@ import {
   MessageSquare
 } from "lucide-react";
 
-type MainNavTab = "home" | "analyze" | "reports" | "studies" | "about";
+type MainNavTab = "home" | "analyze" | "chat" | "reports" | "studies" | "about";
 type ResultsTab = "overview" | "explainability" | "trace" | "chat" | "findings" | "technical";
 
 export default function App() {
@@ -57,7 +57,7 @@ export default function App() {
 
     try {
       setTimeout(() => setLoadingStep("Segmenting pulmonary lung fields..."), 600);
-      setTimeout(() => setLoadingStep("Running 14-disease DenseNet-121 inference..."), 1200);
+      setTimeout(() => setLoadingStep("Running 14-disease multi-label inference..."), 1200);
       setTimeout(() => setLoadingStep("Synthesizing Grad-CAM++ attribution heatmaps..."), 1800);
 
       const patientId = `PT-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -111,7 +111,7 @@ export default function App() {
 
       // If file was fetched successfully
       if (fileToSend) {
-        setTimeout(() => setLoadingStep("Running DenseNet-121 multi-label inference..."), 700);
+        setTimeout(() => setLoadingStep("Running multi-label neural inference..."), 700);
         setTimeout(() => setLoadingStep("Calculating Grad-CAM++ & anatomical zones..."), 1400);
 
         const data = await analyzeRadiograph(
@@ -231,12 +231,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white relative overflow-x-hidden">
-      {/* Precision Ambient Background Atmosphere */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 bg-dots-subtle opacity-70"></div>
+      {/* Precision Ambient Animated Background Atmosphere */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 bg-dots-subtle opacity-60 animate-grid-float"></div>
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute -top-36 left-1/2 -translate-x-1/2 w-[850px] h-[450px] bg-gradient-to-b from-blue-400/15 via-cyan-400/8 to-transparent blur-3xl rounded-full"></div>
-        <div className="absolute top-1/3 -left-48 w-80 h-80 bg-blue-300/10 blur-3xl rounded-full animate-pulse-glow"></div>
-        <div className="absolute top-2/3 -right-48 w-80 h-80 bg-cyan-300/10 blur-3xl rounded-full animate-pulse-glow"></div>
+        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[950px] h-[500px] bg-gradient-to-b from-blue-500/15 via-indigo-400/10 to-transparent blur-3xl rounded-full animate-ambient-drift-1"></div>
+        <div className="absolute top-1/4 -left-40 w-[420px] h-[420px] bg-gradient-to-tr from-cyan-400/12 via-blue-300/8 to-transparent blur-3xl rounded-full animate-ambient-drift-2"></div>
+        <div className="absolute top-1/2 -right-40 w-[440px] h-[440px] bg-gradient-to-bl from-indigo-400/12 via-purple-300/8 to-transparent blur-3xl rounded-full animate-ambient-drift-3"></div>
+        <div className="absolute -bottom-32 left-1/3 w-[600px] h-[350px] bg-gradient-to-t from-blue-400/10 to-transparent blur-3xl rounded-full animate-ambient-drift-1"></div>
       </div>
 
       {/* 1. Global Navigation Bar */}
@@ -245,6 +246,7 @@ export default function App() {
           activeNav={activeNav}
           onNavChange={(nav) => setActiveNav(nav)}
           hasStudy={!!study}
+          onOpenChat={() => setIsFloatingChatOpen(true)}
         />
       </div>
 
@@ -286,10 +288,23 @@ export default function App() {
       <div className="flex-1 relative z-10">
         {/* Page 1: Landing / Home */}
         {activeNav === "home" && (
-          <HomePage onGetStarted={() => setActiveNav("analyze")} />
+          <HomePage
+            onGetStarted={() => setActiveNav("analyze")}
+            onOpenChat={() => setIsFloatingChatOpen(true)}
+          />
         )}
 
-        {/* Page 2: Analyze (Upload -> Results) */}
+        {/* Page 2: Dedicated AI Copilot Full-Page View */}
+        {activeNav === "chat" && (
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in space-y-4">
+            <ClinicalChatbot
+              study={study}
+              onBackToOverview={() => setActiveNav(study ? "analyze" : "home")}
+            />
+          </div>
+        )}
+
+        {/* Page 3: Analyze (Upload -> Results) */}
         {activeNav === "analyze" && (
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
             {!study ? (
@@ -298,6 +313,7 @@ export default function App() {
                 onUpload={handleFileUpload}
                 onSelectSample={handleSelectSample}
                 isLoading={isLoading}
+                onOpenChat={() => setIsFloatingChatOpen(true)}
               />
             ) : (
               // Results Presentation with Sub-Tabs
@@ -441,7 +457,7 @@ export default function App() {
                           14-Disease Radiographic Evaluation
                         </h3>
                         <p className="text-xs text-slate-500">
-                          DenseNet-121 calibrated probabilities for all NIH ChestX-ray14 thoracic pathologies.
+                          Calibrated multi-label probabilities for all NIH ChestX-ray14 thoracic pathologies.
                         </p>
                       </div>
                       <span className="text-xs font-semibold px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
@@ -814,27 +830,25 @@ export default function App() {
         </div>
       </footer>
 
-      {/* 6. Floating AI Copilot Trigger & Drawer */}
-      {study && (
-        <>
-          {!isFloatingChatOpen && (
-            <button
-              onClick={() => setIsFloatingChatOpen(true)}
-              className="fixed bottom-6 right-6 z-40 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-3 rounded-full shadow-lg shadow-blue-500/20 flex items-center space-x-2 transition hover:scale-105 active:scale-95 cursor-pointer border border-white/20 animate-fade-in"
-            >
-              <MessageSquare className="w-4 h-4" />
-              <span>Radiology Copilot</span>
-            </button>
-          )}
+      {/* 6. Floating AI Copilot Trigger & Drawer (Available Everywhere on Any Page) */}
+      {!isFloatingChatOpen && (
+        <button
+          onClick={() => setIsFloatingChatOpen(true)}
+          className="fixed bottom-6 right-6 z-40 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold px-4 py-3 rounded-full shadow-xl shadow-blue-500/25 flex items-center space-x-2.5 transition hover:scale-105 active:scale-95 cursor-pointer border border-white/20 animate-fade-in group"
+          title="Ask AI Clinical Copilot (Available with or without radiograph)"
+        >
+          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+          <MessageSquare className="w-4 h-4" />
+          <span>{study ? `Study Copilot (${study.patient_id})` : "Ask AI Copilot"}</span>
+        </button>
+      )}
 
-          {isFloatingChatOpen && (
-            <ClinicalChatbot
-              study={study}
-              isFloating={true}
-              onClose={() => setIsFloatingChatOpen(false)}
-            />
-          )}
-        </>
+      {isFloatingChatOpen && (
+        <ClinicalChatbot
+          study={study}
+          isFloating={true}
+          onClose={() => setIsFloatingChatOpen(false)}
+        />
       )}
     </div>
   );
